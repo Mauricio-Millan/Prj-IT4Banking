@@ -26,7 +26,7 @@ jobs:
       # SQL Server ni Alembic aqui, los tests corren contra SQLite en memoria.
       - name: Tests
         working-directory: backend
-        run: pytest -q
+        run: python -m pytest -q
 
   deploy:
     # Solo en push a main: en PR nos quedamos en "test". Corre en el runner
