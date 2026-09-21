@@ -1,0 +1,63 @@
+name: backend
+
+on:
+  pull_request:
+    paths: ["backend/**"]
+  push:
+    branches: [main]
+    paths: ["backend/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - run: pip install -r backend/requirements.txt ruff
+
+      - name: Lint
+        run: ruff check backend
+
+      # conftest.py fija DATABASE_URL=sqlite:// y las claves de prueba: no hace falta
+      # SQL Server ni Alembic aqui, los tests corren contra SQLite en memoria.
+      - name: Tests
+        working-directory: backend
+        run: pytest -q
+
+  deploy:
+    # Solo en push a main: en PR nos quedamos en "test". Corre en el runner
+    # self-hosted porque este tenant academico no permite crear ninguna
+    # identidad con permisos sobre la suscripcion (ver docs/ci-cd-estrategia.md).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: [self-hosted, bancocloud]
+    environment:
+      name: dev
+      url: https://ca-bancocloud-api.ashyrock-5daec08d.canadacentral.azurecontainerapps.io
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build y push de la imagen (az acr build)
+        run: az acr build -r acrbancocloud -t bancocloud/backend:${{ github.sha }} -t bancocloud/backend:latest backend
+
+      - name: Actualizar Container App
+        run: |
+          az containerapp update \
+            -g rg-bancocloud -n ca-bancocloud-api \
+            --image acrbancocloud.azurecr.io/bancocloud/backend:${{ github.sha }}
+
+      - name: Verificar que el API responde (smoke test)
+        run: |
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://ca-bancocloud-api.ashyrock-5daec08d.canadacentral.azurecontainerapps.io/openapi.json)
+            [ "$code" = "200" ] && echo "OK: API responde (200)" && exit 0
+            sleep 10
+          done
+          echo "::error::El API no respondio 200 tras el despliegue"
+          exit 1
