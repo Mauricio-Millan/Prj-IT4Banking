@@ -23,6 +23,10 @@ class PrestamoYaResuelto(Exception):
     pass
 
 
+class RequiereAdmin(Exception):
+    """V13: un caso de un cliente marcado es_empleado (conflicto de interes) solo lo resuelve un admin."""
+
+
 def a_schema(p: Prestamo) -> PrestamoOut:
     return PrestamoOut(
         prestamo_id=p.prestamo_id, monto_original=p.monto_original, saldo_capital=p.saldo_capital, tasa=p.tasa,
@@ -85,12 +89,16 @@ def listar_pendientes(db: Session) -> list[PrestamoRevisionOut]:
     ]
 
 
-def resolver(db: Session, prestamo_id: int, decision: str, usuario_id: int, ip: str | None = None) -> Prestamo:
+def resolver(db: Session, prestamo_id: int, decision: str, usuario_id: int, rol: str, ip: str | None = None) -> Prestamo:
     prestamo = db.get(Prestamo, prestamo_id)
     if prestamo is None:
         raise RecursoNoEncontrado()
     if prestamo.estado != "solicitado":
         raise PrestamoYaResuelto()
+
+    cliente = db.get(Cliente, prestamo.cliente_id)
+    if cliente.es_empleado and rol != "admin":
+        raise RequiereAdmin()
 
     if decision == "aprobar":
         prestamo.estado = "vigente"

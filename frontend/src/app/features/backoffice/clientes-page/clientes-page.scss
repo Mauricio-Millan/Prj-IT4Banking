@@ -1,0 +1,96 @@
+.cli {
+  &__head {
+    margin-bottom: 1.5rem;
+
+    h1 {
+      margin: 0.75rem 0 0.35rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--bc-ink-3);
+    }
+  }
+
+  &__estado {
+    padding: 2rem 0;
+    color: var(--bc-ink-3);
+
+    &--error {
+      color: var(--bc-danger);
+    }
+  }
+
+  &__lista {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  &__fila {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--bc-hairline);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__fila-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__nombre {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__meta {
+    margin: 0.15rem 0 0;
+    font-size: 0.8rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__tags {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  &__sin-cuentas {
+    margin: 0.75rem 0 0;
+    font-size: 0.85rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__cuentas {
+    margin-top: 0.75rem;
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  &__cuenta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bc-surface-2);
+    border-radius: var(--bc-r-md);
+
+    b {
+      margin-left: auto;
+    }
+  }
+
+  &__paginacion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+}

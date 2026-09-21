@@ -15,8 +15,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(conToken).pipe(
     catchError((err: HttpErrorResponse) => {
       if (err.status === 401 && !req.url.endsWith('/auth/login')) {
+        // Un usuario interno desactivado (V7) cae aqui con un JWT aun vigente: el interceptor
+        // debe devolverlo a SU login, no al de clientes.
+        const enBackoffice = router.url.startsWith('/backoffice');
         auth.logout();
-        router.navigate(['/login']);
+        router.navigate([enBackoffice ? '/backoffice/login' : '/login']);
       }
       return throwError(() => err);
     }),

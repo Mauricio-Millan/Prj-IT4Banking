@@ -1,0 +1,61 @@
+<header class="cli__head bc-reveal">
+  <span class="bc-eyebrow">Backoffice · admin</span>
+  <h1>Clientes y cuentas</h1>
+  <p>Listado completo, solo para administradores (excepción documentada a la regla de "sin búsqueda libre de clientes").</p>
+</header>
+
+@if (cargando()) {
+  <p class="cli__estado bc-reveal">Cargando clientes…</p>
+} @else if (error()) {
+  <p class="cli__estado cli__estado--error bc-reveal">No pudimos cargar el listado de clientes.</p>
+} @else if (clientes().length === 0) {
+  <p class="cli__estado bc-reveal">No hay clientes registrados.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core cli__lista">
+      @for (c of clientes(); track c.cliente_id) {
+        <article class="cli__fila">
+          <header class="cli__fila-cabecera">
+            <div>
+              <p class="cli__nombre">{{ c.nombres }} {{ c.apellidos }}</p>
+              <p class="cli__meta">
+                Código {{ c.codigo_cliente }} · {{ c.tipo_documento }} {{ c.numero_documento }} · {{ c.email }}
+              </p>
+              <p class="cli__meta">{{ c.region }} · segmento {{ c.segmento }} · cliente desde {{ c.fecha_alta | date }}</p>
+            </div>
+            <div class="cli__tags">
+              <span class="bc-tag" [class.bc-tag--ok]="c.estado === 'activo'" [class.bc-tag--off]="c.estado !== 'activo'">
+                {{ c.estado }}
+              </span>
+              @if (c.es_empleado) {
+                <span class="bc-tag bc-tag--warn">Empleado</span>
+              }
+            </div>
+          </header>
+
+          @if (c.cuentas.length === 0) {
+            <p class="cli__sin-cuentas">Sin cuentas.</p>
+          } @else {
+            <div class="cli__cuentas">
+              @for (cu of c.cuentas; track cu.cuenta_id) {
+                <div class="cli__cuenta">
+                  <span>N.° {{ cu.numero_cuenta }} · {{ cu.tipo_cuenta }} · {{ cu.moneda }}</span>
+                  <b>{{ +cu.saldo | currency:cu.moneda }}</b>
+                  <span class="bc-tag" [class.bc-tag--ok]="cu.estado === 'activa'" [class.bc-tag--off]="cu.estado !== 'activa'">
+                    {{ cu.estado }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </article>
+      }
+    </div>
+  </section>
+
+  <nav class="cli__paginacion bc-reveal" aria-label="Paginación de clientes">
+    <button type="button" class="bc-btn bc-btn--ghost" [disabled]="pagina() <= 1" (click)="irAPagina(pagina() - 1)">Anterior</button>
+    <span>Página {{ pagina() }}</span>
+    <button type="button" class="bc-btn bc-btn--ghost" [disabled]="pagina() * tamano >= total()" (click)="irAPagina(pagina() + 1)">Siguiente</button>
+  </nav>
+}

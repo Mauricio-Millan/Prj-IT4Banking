@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     database_url: str
     jwt_secret: str = "cambiar-en-produccion"
     jwt_exp_minutes: int = 30
+    # Backoffice (HU-Gestion-Usuarios-Internos-Backoffice): sesion corta para personal interno,
+    # y dominio que distingue un correo de empleado de uno de cliente.
+    jwt_exp_minutes_backoffice: int = 15
+    dominio_corporativo: str = "bancocloud.pe"
     cors_origins: str = "http://localhost:4200"
 
     # Numeracion bancaria (ficticios: no usar el codigo real de ningun banco).

@@ -31,7 +31,7 @@ export class Auth {
 
   login(email: string, password: string) {
     return this.http
-      .post<{ access_token: string }>(`${environment.apiUrl}/auth/login`, { email, password })
+      .post<{ access_token: string; debe_cambiar_password: boolean }>(`${environment.apiUrl}/auth/login`, { email, password })
       .pipe(tap(r => this.guardar(r.access_token)));
   }
 

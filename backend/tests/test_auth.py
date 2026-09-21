@@ -69,6 +69,12 @@ def test_registro_normaliza_y_rechaza_duplicados(cliente):
     assert r.status_code == 409 and r.json()["detail"]["campo"] == "email"
 
 
+def test_registro_rechaza_correo_corporativo(cliente):
+    # V3: un cliente no puede aparentar ser personal del banco.
+    r = cliente.post("/auth/registro", json={**MARIA, "email": "impostor@bancocloud.pe"})
+    assert r.status_code == 422
+
+
 def test_registro_valida_dni_y_edad(cliente):
     assert cliente.post("/auth/registro", json={**MARIA, "numero_documento": "123"}).status_code == 422
     assert cliente.post("/auth/registro", json={**MARIA, "fecha_nacimiento": "2015-01-01"}).status_code == 422

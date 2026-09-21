@@ -1,0 +1,87 @@
+<header class="usr__head bc-reveal">
+  <span class="bc-eyebrow">Backoffice</span>
+  <h1>Usuarios internos</h1>
+  <p>Alta, activación/desactivación y cambio de rol del personal con acceso al backoffice.</p>
+</header>
+
+<section class="bc-shell bc-reveal">
+  <form class="bc-core usr__crear" [formGroup]="crearForm" (ngSubmit)="crear()">
+    <h2>Nuevo usuario</h2>
+    <div class="usr__crear-campos">
+      <label class="campo">
+        <span class="campo__label">Correo corporativo</span>
+        <input formControlName="email" type="email" placeholder="nombre@bancocloud.pe" />
+      </label>
+      <label class="campo">
+        <span class="campo__label">Rol</span>
+        <select formControlName="rol">
+          <option value="analista">Analista</option>
+          <option value="admin">Admin</option>
+        </select>
+      </label>
+      <label class="campo">
+        <span class="campo__label">Contraseña temporal</span>
+        <input formControlName="password_temporal" type="text" placeholder="Mínimo 12 caracteres" />
+      </label>
+    </div>
+    @if (errorCrear()) {
+      <p class="usr__error" role="alert">{{ errorCrear() }}</p>
+    }
+    <button type="submit" class="bc-btn bc-btn--primary" [disabled]="creando()">
+      {{ creando() ? 'Creando…' : 'Crear usuario' }}
+    </button>
+  </form>
+</section>
+
+@if (cargando()) {
+  <p class="usr__estado bc-reveal">Cargando usuarios…</p>
+} @else if (error()) {
+  <p class="usr__estado usr__estado--error bc-reveal">No pudimos cargar los usuarios.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core usr__tabla">
+      @for (u of usuarios(); track u.usuario_id) {
+        <article class="usr__fila">
+          <div class="usr__identidad">
+            <p class="usr__email">{{ u.email }}</p>
+            <p class="usr__meta">
+              Último acceso: {{ u.ultimo_acceso ? (u.ultimo_acceso | date:'d MMM y, HH:mm') : 'nunca' }}
+              @if (u.debe_cambiar_password) { · <span class="bc-tag bc-tag--warn">Temporal pendiente</span> }
+            </p>
+          </div>
+
+          <select [ngModel]="u.rol" [ngModelOptions]="{standalone: true}" (ngModelChange)="cambiarRol(u, $event)">
+            <option value="analista">Analista</option>
+            <option value="admin">Admin</option>
+          </select>
+
+          <span class="bc-tag" [class.bc-tag--ok]="u.activo" [class.bc-tag--off]="!u.activo">
+            {{ u.activo ? 'Activo' : 'Inactivo' }}
+          </span>
+
+          <div class="usr__acciones">
+            <button type="button" class="bc-btn bc-btn--ghost" (click)="alternarActivo(u)">
+              {{ u.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+            <button type="button" class="bc-btn bc-btn--ghost" (click)="abrirReset(u.usuario_id)">
+              Resetear temporal
+            </button>
+          </div>
+
+          @if (resetAbierto() === u.usuario_id) {
+            <div class="usr__reset">
+              <input type="text" [ngModel]="nuevaTemporal()" (ngModelChange)="nuevaTemporal.set($event)"
+                     [ngModelOptions]="{standalone: true}" placeholder="Nueva temporal (mín. 12)" />
+              <button type="button" class="bc-btn bc-btn--primary" (click)="confirmarReset(u)">Guardar</button>
+              <button type="button" class="bc-btn bc-btn--ghost" (click)="resetAbierto.set(null)">Cancelar</button>
+            </div>
+          }
+
+          @if (errorFila()?.id === u.usuario_id) {
+            <p class="usr__error" role="alert">{{ errorFila()?.mensaje }}</p>
+          }
+        </article>
+      }
+    </div>
+  </section>
+}

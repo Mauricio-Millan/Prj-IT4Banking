@@ -42,6 +42,10 @@ export const routes: Routes = [
     children: [
       { path: 'login', loadComponent: () => import('./features/login/login-page/login-page').then(m => m.LoginPage) },
       { path: 'registro', loadComponent: () => import('./features/onboarding/onboarding-page/onboarding-page').then(m => m.OnboardingPage) },
+      // Fuera del arbol roleGuard'd de BackofficeLayout a proposito: un visitante sin sesion
+      // (o un cliente que aterriza aqui por error) debe poder ver el login/cambio de contrasena.
+      { path: 'backoffice/login', loadComponent: () => import('./features/backoffice/backoffice-login-page/backoffice-login-page').then(m => m.BackofficeLoginPage) },
+      { path: 'backoffice/cambiar-password', loadComponent: () => import('./features/backoffice/cambiar-password-page/cambiar-password-page').then(m => m.CambiarPasswordPage) },
     ],
   },
   // Debe ir ANTES de ClientLayout/backoffice: el orden del arreglo es el orden de intento, y

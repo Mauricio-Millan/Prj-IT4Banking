@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.config import settings
 from app.schemas.tarjetas import TarjetaOut
 
 REGIONES = (
@@ -33,7 +34,11 @@ class RegistroIn(BaseModel):
     @field_validator("email")
     @classmethod
     def _email_minusculas(cls, v: str) -> str:
-        return v.strip().lower()
+        v = v.strip().lower()
+        # V3: un cliente no puede aparentar ser personal del banco.
+        if v.endswith(f"@{settings.dominio_corporativo}"):
+            raise ValueError("No puedes registrarte con un correo corporativo")
+        return v
 
     @field_validator("fecha_nacimiento")
     @classmethod
@@ -65,6 +70,7 @@ class LoginIn(BaseModel):
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    debe_cambiar_password: bool = False
 
 
 class RegistroOut(TokenOut):
@@ -74,3 +80,8 @@ class RegistroOut(TokenOut):
     numero_cuenta: str
     segmento: str
     tarjeta: TarjetaOut
+
+
+class CambiarPasswordIn(BaseModel):
+    actual: str
+    nueva: str = Field(min_length=8, max_length=72)

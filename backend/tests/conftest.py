@@ -63,10 +63,28 @@ def registrado(cliente: TestClient):
 
 @pytest.fixture
 def token_analista(db: Session):
-    """No hay endpoint para crear un analista; se inserta directo y se firma el token a mano."""
+    """No hay endpoint para crear un analista de partida; se inserta directo y se firma el
+    token a mano. activo=True y debe_cambiar_password=False (defaults del modelo) para que
+    pase el lookup de require_role sin fricción en los tests que no prueban esas reglas."""
     usuario = Usuario(email="analista@bancocloud.pe", password_hash=hash_password("Analista1234"), rol="analista")
     db.add(usuario)
     db.commit()
     db.refresh(usuario)
     token = crear_token(usuario.usuario_id, "analista", None)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def admin(db: Session) -> Usuario:
+    """Usuario admin de partida, para crear/gestionar otros usuarios internos en los tests."""
+    usuario = Usuario(email="admin@bancocloud.pe", password_hash=hash_password("Admin12345678"), rol="admin")
+    db.add(usuario)
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+
+@pytest.fixture
+def token_admin(admin: Usuario):
+    token = crear_token(admin.usuario_id, "admin", None)
     return {"Authorization": f"Bearer {token}"}

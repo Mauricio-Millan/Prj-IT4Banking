@@ -23,6 +23,7 @@ export class ClientLayout {
 
   readonly titulo = input('BancoCloud');
   readonly inicio = input('/cuentas');
+  readonly loginRuta = input('/login');
   readonly menu = input<ItemMenu[]>([
     { ruta: '/cuentas', etiqueta: 'Cuentas' },
     { ruta: '/tarjetas', etiqueta: 'Tarjetas' },
@@ -42,6 +43,6 @@ export class ClientLayout {
 
   protected salir() {
     this.auth.logout();
-    this.router.navigate(['/login']);
+    this.router.navigate([this.loginRuta()]);
   }
 }

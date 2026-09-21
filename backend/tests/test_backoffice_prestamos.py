@@ -60,3 +60,27 @@ def test_solicitud_autodecidida_no_aparece_en_cola(cliente, registrado, token_an
 
     r = cliente.get("/backoffice/prestamos", headers=token_analista)
     assert r.json() == []
+
+
+def test_conflicto_de_interes_solo_lo_resuelve_un_admin(cliente, registrado, token_analista, token_admin, db):
+    headers, cliente_id, _ = registrado()
+    prestamo_id = _solicitar_grande(cliente, headers).json()["prestamo_id"]
+
+    r = cliente.patch(f"/backoffice/clientes/{cliente_id}/es-empleado", headers=token_admin, json={"es_empleado": True})
+    assert r.status_code == 204
+
+    r_analista = cliente.patch(f"/backoffice/prestamos/{prestamo_id}", headers=token_analista, json={"decision": "aprobar"})
+    assert r_analista.status_code == 403
+
+    r_admin = cliente.patch(f"/backoffice/prestamos/{prestamo_id}", headers=token_admin, json={"decision": "aprobar"})
+    assert r_admin.status_code == 200
+
+
+def test_consultar_cola_de_prestamos_deja_rastro_en_audit_log(cliente, registrado, token_analista, db):
+    headers, _, _ = registrado()
+    _solicitar_grande(cliente, headers)
+
+    from app.models import AuditLog
+
+    cliente.get("/backoffice/prestamos", headers=token_analista)
+    assert db.query(AuditLog).filter_by(accion="consultar", entidad="cola_prestamos").count() == 1
