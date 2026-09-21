@@ -10,7 +10,7 @@ const TAMANO = 20;
 
 const ETIQUETA_TIPO: Record<string, string> = {
   deposito: 'Depósito', retiro: 'Retiro', transferencia: 'Transferencia',
-  pago_prestamo: 'Pago de préstamo', comision: 'Comisión',
+  pago_prestamo: 'Pago de préstamo', comision: 'Comisión', desembolso: 'Desembolso de préstamo',
 };
 
 @Component({

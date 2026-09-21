@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
 export type TipoTransaccion = 'deposito' | 'retiro' | 'transferencia';
+export type Canal = 'cajero' | 'agente';
 
 export interface TransaccionIn {
   tipo: TipoTransaccion;
@@ -11,6 +12,13 @@ export interface TransaccionIn {
   cuenta_origen_id: number | null;
   // numero_cuenta (14 digitos) o cci (20 digitos) de destino, nunca un id interno
   cuenta_destino: string | null;
+  // obligatorio para deposito/retiro (HU-Tarifario-Comisiones); no se manda en transferencia
+  canal: Canal | null;
+}
+
+export interface ComisionOut {
+  monto: string;
+  concepto: string;
 }
 
 export interface TransaccionOut {
@@ -20,10 +28,12 @@ export interface TransaccionOut {
   monto: string;
   canal: string;
   estado: string;
+  concepto: string | null;
   cuenta_origen_id: number | null;
   cuenta_destino_id: number | null;
   cuenta_origen_numero: string | null;
   cuenta_destino_numero: string | null;
+  comision: ComisionOut | null;
 }
 
 @Injectable({ providedIn: 'root' })

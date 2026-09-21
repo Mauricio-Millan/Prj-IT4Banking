@@ -1,0 +1,101 @@
+.emp {
+  &__head {
+    margin-bottom: 1.5rem;
+
+    p {
+      margin: 0.25rem 0 0;
+      color: var(--bc-ink-3);
+    }
+  }
+
+  &__form {
+    padding: 1.5rem;
+    display: grid;
+    gap: 1rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+  }
+
+  &__campos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem;
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--bc-danger);
+    font-size: 0.85rem;
+  }
+
+  &__aviso-temporal {
+    margin-top: 1.25rem;
+  }
+
+  &__aviso-titulo {
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+  }
+
+  &__temporal {
+    margin: 0.5rem 0;
+
+    code {
+      background: var(--bc-surface-2);
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--bc-r-md);
+      font-size: 1rem;
+    }
+  }
+
+  &__aviso-advertencia {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--bc-danger);
+  }
+
+  &__subtitulo {
+    margin: 2.5rem 0 1rem;
+  }
+
+  &__estado {
+    padding: 1rem 0;
+    color: var(--bc-ink-3);
+
+    &--error {
+      color: var(--bc-danger);
+    }
+  }
+
+  &__tabla {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  &__fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--bc-hairline);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__razon {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__meta {
+    margin: 0.15rem 0 0;
+    font-size: 0.8rem;
+    color: var(--bc-ink-3);
+  }
+}

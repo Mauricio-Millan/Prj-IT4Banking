@@ -44,7 +44,7 @@ def _saldo_reconciliado(db, cuenta_id) -> Decimal:
 def test_deposito_genera_asiento_balanceado(cliente, registrado, db):
     headers, _, cuenta_id = registrado()
     r = cliente.post("/transacciones", headers=headers,
-                      json={"tipo": "deposito", "monto": "300.00", "cuenta_destino": _numero(db, cuenta_id)})
+                      json={"tipo": "deposito", "monto": "300.00", "cuenta_destino": _numero(db, cuenta_id), "canal": "agente"})
     assert r.status_code == 201, r.text
 
     asiento = _asiento_de(db, r.json()["transaccion_id"])
@@ -59,9 +59,9 @@ def test_deposito_genera_asiento_balanceado(cliente, registrado, db):
 def test_retiro_con_saldo_suficiente_genera_asiento_balanceado(cliente, registrado, db):
     headers, _, cuenta_id = registrado()
     cliente.post("/transacciones", headers=headers,
-                 json={"tipo": "deposito", "monto": "1300.00", "cuenta_destino": _numero(db, cuenta_id)})
+                 json={"tipo": "deposito", "monto": "1300.00", "cuenta_destino": _numero(db, cuenta_id), "canal": "agente"})
     r = cliente.post("/transacciones", headers=headers,
-                      json={"tipo": "retiro", "monto": "200.00", "cuenta_origen_id": cuenta_id})
+                      json={"tipo": "retiro", "monto": "200.00", "cuenta_origen_id": cuenta_id, "canal": "cajero"})
     assert r.status_code == 201, r.text
 
     asiento = _asiento_de(db, r.json()["transaccion_id"])
@@ -75,7 +75,7 @@ def test_retiro_con_saldo_insuficiente_no_deja_rastro_contable(cliente, registra
     total_antes = db.scalar(select(func.count()).select_from(AsientoContable))
 
     r = cliente.post("/transacciones", headers=headers,
-                      json={"tipo": "retiro", "monto": "500.00", "cuenta_origen_id": cuenta_id})
+                      json={"tipo": "retiro", "monto": "500.00", "cuenta_origen_id": cuenta_id, "canal": "cajero"})
     assert r.status_code == 422
 
     assert db.get(Cuenta, cuenta_id).saldo == Decimal("0.00")
@@ -87,7 +87,7 @@ def test_transferencia_intrabancaria_un_asiento_balanceado_con_ambas_cuentas(cli
     headers_a, _, cuenta_a = registrado()
     _, _, cuenta_b = registrado(numero_documento="70011223", email="otra@correo.pe")
     cliente.post("/transacciones", headers=headers_a,
-                 json={"tipo": "deposito", "monto": "1000.00", "cuenta_destino": _numero(db, cuenta_a)})
+                 json={"tipo": "deposito", "monto": "1000.00", "cuenta_destino": _numero(db, cuenta_a), "canal": "agente"})
 
     r = cliente.post("/transacciones", headers=headers_a,
                       json={"tipo": "transferencia", "monto": "300.00",
@@ -114,7 +114,7 @@ def test_transferencia_entre_monedas_distintas_no_toca_el_ledger(cliente, regist
     db.add(cuenta_usd)
     db.commit()
     cliente.post("/transacciones", headers=headers_a,
-                 json={"tipo": "deposito", "monto": "500.00", "cuenta_destino": _numero(db, cuenta_a)})
+                 json={"tipo": "deposito", "monto": "500.00", "cuenta_destino": _numero(db, cuenta_a), "canal": "agente"})
     total_antes = db.scalar(select(func.count()).select_from(AsientoContable))
 
     r = cliente.post("/transacciones", headers=headers_a,
@@ -128,9 +128,9 @@ def test_reconciliacion_saldo_materializado_igual_a_suma_del_libro_mayor(cliente
     headers_a, _, cuenta_a = registrado()
     headers_b, _, cuenta_b = registrado(numero_documento="70011223", email="otra@correo.pe")
     cliente.post("/transacciones", headers=headers_a,
-                 json={"tipo": "deposito", "monto": "1000.00", "cuenta_destino": _numero(db, cuenta_a)})
+                 json={"tipo": "deposito", "monto": "1000.00", "cuenta_destino": _numero(db, cuenta_a), "canal": "agente"})
     cliente.post("/transacciones", headers=headers_a,
-                 json={"tipo": "retiro", "monto": "150.00", "cuenta_origen_id": cuenta_a})
+                 json={"tipo": "retiro", "monto": "150.00", "cuenta_origen_id": cuenta_a, "canal": "cajero"})
     cliente.post("/transacciones", headers=headers_a,
                  json={"tipo": "transferencia", "monto": "200.00",
                        "cuenta_origen_id": cuenta_a, "cuenta_destino": _numero(db, cuenta_b)})
@@ -186,7 +186,7 @@ def test_dos_retiros_concurrentes_no_producen_saldo_negativo():
         def intentar_retiro():
             with Sesion() as s:
                 try:
-                    datos = TransaccionIn(tipo="retiro", monto=Decimal("400.00"), cuenta_origen_id=cuenta_id)
+                    datos = TransaccionIn(tipo="retiro", monto=Decimal("400.00"), cuenta_origen_id=cuenta_id, canal="cajero")
                     svc.crear(s, cliente_id, usuario_id=1, datos=datos)
                     resultados.append("ok")
                 except SaldoInsuficiente:

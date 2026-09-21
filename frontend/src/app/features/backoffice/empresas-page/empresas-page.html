@@ -1,0 +1,101 @@
+<header class="emp__head bc-reveal">
+  <span class="bc-eyebrow">Backoffice</span>
+  <h1>Cuentas empresariales</h1>
+  <p>Alta de empresas (RUC) exclusiva de administradores. El autoservicio nunca crea una empresa.</p>
+</header>
+
+<section class="bc-shell bc-reveal">
+  <form class="bc-core emp__form" [formGroup]="form" (ngSubmit)="crear()">
+    <h2>Nueva empresa</h2>
+    <div class="emp__campos">
+      <label class="campo" [class.campo--error]="invalido('ruc')">
+        <span class="campo__label">RUC</span>
+        <input formControlName="ruc" type="text" inputmode="numeric" placeholder="20123456789" maxlength="11" />
+        @if (invalido('ruc')) {
+          <span class="campo__hint campo__hint--error">RUC inválido: 11 dígitos, empieza en 20, dígito verificador correcto.</span>
+        }
+      </label>
+
+      <label class="campo" [class.campo--error]="invalido('razon_social')">
+        <span class="campo__label">Razón social</span>
+        <input formControlName="razon_social" type="text" />
+      </label>
+
+      <label class="campo" [class.campo--error]="invalido('representante_nombres')">
+        <span class="campo__label">Nombres del representante</span>
+        <input formControlName="representante_nombres" type="text" />
+      </label>
+
+      <label class="campo" [class.campo--error]="invalido('representante_apellidos')">
+        <span class="campo__label">Apellidos del representante</span>
+        <input formControlName="representante_apellidos" type="text" />
+      </label>
+
+      <label class="campo" [class.campo--error]="invalido('email')">
+        <span class="campo__label">Correo del representante</span>
+        <input formControlName="email" type="email" />
+      </label>
+
+      <label class="campo">
+        <span class="campo__label">Teléfono (opcional)</span>
+        <input formControlName="telefono" type="text" />
+      </label>
+
+      <label class="campo">
+        <span class="campo__label">Región</span>
+        <select formControlName="region">
+          @for (r of regiones; track r) {
+            <option [value]="r">{{ r }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    @if (errorCrear()) {
+      <p class="emp__error" role="alert">{{ errorCrear() }}</p>
+    }
+
+    <button type="submit" class="bc-btn bc-btn--primary" [disabled]="enviando()">
+      {{ enviando() ? 'Creando…' : 'Crear empresa' }}
+    </button>
+  </form>
+</section>
+
+@if (ultimaAlta(); as a) {
+  <section class="bc-shell bc-reveal emp__aviso-temporal">
+    <div class="bc-core">
+      <p class="emp__aviso-titulo">Empresa creada: {{ a.razon_social }}</p>
+      <p>Cuenta N.° {{ a.numero_cuenta }} · CCI {{ a.cci }}</p>
+      <p class="emp__temporal">
+        Contraseña temporal: <code>{{ a.password_temporal }}</code>
+      </p>
+      <p class="emp__aviso-advertencia">Cópiala ahora y compártela con el representante fuera de banda: no se volverá a mostrar.</p>
+    </div>
+  </section>
+}
+
+<h2 class="emp__subtitulo bc-reveal">Empresas registradas</h2>
+
+@if (cargando()) {
+  <p class="emp__estado bc-reveal">Cargando empresas…</p>
+} @else if (error()) {
+  <p class="emp__estado emp__estado--error bc-reveal">No pudimos cargar las empresas.</p>
+} @else if (empresas().length === 0) {
+  <p class="emp__estado bc-reveal">Todavía no se han creado empresas.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core emp__tabla">
+      @for (e of empresas(); track e.cliente_id) {
+        <article class="emp__fila">
+          <div>
+            <p class="emp__razon">{{ e.razon_social }}</p>
+            <p class="emp__meta">RUC {{ e.ruc }} · código {{ e.codigo_cliente }} · {{ e.region }} · desde {{ e.fecha_alta | date }}</p>
+          </div>
+          <span class="bc-tag" [class.bc-tag--ok]="e.estado === 'activo'" [class.bc-tag--off]="e.estado !== 'activo'">
+            {{ e.estado }}
+          </span>
+        </article>
+      }
+    </div>
+  </section>
+}

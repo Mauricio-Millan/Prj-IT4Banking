@@ -74,6 +74,8 @@ class MovimientoContable(Base):
 CODIGO_CAJA = "1101"
 CODIGO_DEPOSITOS_VISTA = "2101"
 CODIGO_INGRESOS_COMISION = "4101"
+CODIGO_PRESTAMOS_POR_COBRAR = "1301"  # HU-Ciclo-Vida-Prestamo
+CODIGO_INGRESOS_INTERESES = "4201"  # HU-Ciclo-Vida-Prestamo
 
 
 def filas_seed_plan_de_cuentas() -> list[dict]:
@@ -83,4 +85,6 @@ def filas_seed_plan_de_cuentas() -> list[dict]:
         {"codigo": CODIGO_CAJA, "nombre": "Caja", "naturaleza": "D", "tipo": "activo"},
         {"codigo": CODIGO_DEPOSITOS_VISTA, "nombre": "Depositos a la vista", "naturaleza": "H", "tipo": "pasivo"},
         {"codigo": CODIGO_INGRESOS_COMISION, "nombre": "Ingresos por comision", "naturaleza": "H", "tipo": "ingreso"},
+        {"codigo": CODIGO_PRESTAMOS_POR_COBRAR, "nombre": "Prestamos por cobrar", "naturaleza": "D", "tipo": "activo"},
+        {"codigo": CODIGO_INGRESOS_INTERESES, "nombre": "Ingresos por intereses", "naturaleza": "H", "tipo": "ingreso"},
     ]

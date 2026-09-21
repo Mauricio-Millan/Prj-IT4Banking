@@ -4,8 +4,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AgruparDigitosPipe } from '../../../shared/pipes/agrupar-digitos.pipe';
 import { numeroCuentaValidator } from '../../../shared/validators/luhn';
-import { Cuentas, CuentaOut } from '../../cuentas/cuentas';
-import { Transacciones, TipoTransaccion } from '../transacciones';
+import { ComisionRetiroOut, Cuentas, CuentaOut } from '../../cuentas/cuentas';
+import { Canal, Transacciones, TipoTransaccion } from '../transacciones';
 
 // Regla de exactitud monetaria: nunca <input type="number">. El string tal cual
 // se manda en el JSON — Pydantic lo parsea a Decimal exacto, sin redondeo de punto flotante.
@@ -26,10 +26,12 @@ export class NuevaTransaccionPage implements OnInit {
   protected readonly cuentas = signal<CuentaOut[]>([]);
   protected readonly enviando = signal(false);
   protected readonly errorServidor = signal<string | null>(null);
+  protected readonly comisionRetiro = signal<ComisionRetiroOut | null>(null);
 
   protected readonly form = this.fb.group({
     tipo: this.fb.control<TipoTransaccion>('deposito'),
     monto: ['', [Validators.required, Validators.pattern(PATRON_MONTO)]],
+    canal: this.fb.control<Canal | null>(null),
     cuenta_origen_id: this.fb.control<number | null>(null),
     // depósito: numero_cuenta propio elegido de un <select>; transferencia: numero_cuenta/cci tipeado a mano
     cuenta_destino_deposito: this.fb.control<string | null>(null),
@@ -41,8 +43,18 @@ export class NuevaTransaccionPage implements OnInit {
       this.cuentas.set(cuentas);
       if (cuentas.length === 1) {
         this.form.patchValue({ cuenta_origen_id: cuentas[0].cuenta_id, cuenta_destino_deposito: cuentas[0].numero_cuenta });
+        this.consultarComisionRetiro(cuentas[0].cuenta_id);
       }
     });
+
+    this.form.get('cuenta_origen_id')!.valueChanges.subscribe(id => this.consultarComisionRetiro(id));
+    this.form.get('tipo')!.valueChanges.subscribe(() => this.consultarComisionRetiro(this.form.value.cuenta_origen_id ?? null));
+  }
+
+  private consultarComisionRetiro(cuentaId: number | null) {
+    this.comisionRetiro.set(null);
+    if (cuentaId === null || this.form.value.tipo !== 'retiro') return;
+    this.cuentasApi.comisionRetiro(cuentaId).subscribe(c => this.comisionRetiro.set(c));
   }
 
   protected invalido(campo: string) {
@@ -59,21 +71,27 @@ export class NuevaTransaccionPage implements OnInit {
   protected enviar() {
     const datos = this.form.getRawValue();
     const esDeposito = datos.tipo === 'deposito';
+    const esTransferencia = datos.tipo === 'transferencia';
     const cuentaDestino = esDeposito ? datos.cuenta_destino_deposito : datos.cuenta_destino_transferencia;
     const faltaOrigen = !esDeposito && datos.cuenta_origen_id == null;
     const faltaDestino = !cuentaDestino;
+    const faltaCanal = !esTransferencia && !datos.canal;
     const destinoControl = esDeposito ? 'cuenta_destino_deposito' : 'cuenta_destino_transferencia';
 
-    if (this.form.get('monto')!.invalid || this.form.get(destinoControl)!.invalid || faltaOrigen || faltaDestino) {
+    if (this.form.get('monto')!.invalid || this.form.get(destinoControl)!.invalid || faltaOrigen || faltaDestino || faltaCanal) {
       this.form.markAllAsTouched();
       if (faltaOrigen) this.form.get('cuenta_origen_id')!.setErrors({ required: true });
       if (faltaDestino) this.form.get(destinoControl)!.setErrors({ required: true });
+      if (faltaCanal) this.form.get('canal')!.setErrors({ required: true });
       return;
     }
 
     this.enviando.set(true);
     this.errorServidor.set(null);
-    this.api.crear({ tipo: datos.tipo, monto: datos.monto, cuenta_origen_id: datos.cuenta_origen_id, cuenta_destino: cuentaDestino }).subscribe({
+    this.api.crear({
+      tipo: datos.tipo, monto: datos.monto, cuenta_origen_id: datos.cuenta_origen_id,
+      cuenta_destino: cuentaDestino, canal: esTransferencia ? null : datos.canal,
+    }).subscribe({
       next: () => this.router.navigate(['/cuentas']),
       error: (e: HttpErrorResponse) => {
         this.enviando.set(false);

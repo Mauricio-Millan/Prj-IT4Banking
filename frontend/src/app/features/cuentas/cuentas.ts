@@ -28,6 +28,7 @@ export interface MovimientoOut {
   monto: string;
   canal: string;
   estado: string;
+  concepto: string | null;
   direccion: 'entrada' | 'salida';
   cuenta_origen_id: number | null;
   cuenta_destino_id: number | null;
@@ -42,6 +43,11 @@ export interface MovimientosPagina {
   tamano: number;
 }
 
+export interface ComisionRetiroOut {
+  monto: string;
+  retiros_gratis_restantes: number | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class Cuentas {
   private readonly http = inject(HttpClient);
@@ -52,6 +58,10 @@ export class Cuentas {
 
   saldo(cuentaId: number) {
     return this.http.get<SaldoOut>(`${environment.apiUrl}/cuentas/${cuentaId}/saldo`);
+  }
+
+  comisionRetiro(cuentaId: number) {
+    return this.http.get<ComisionRetiroOut>(`${environment.apiUrl}/cuentas/${cuentaId}/comision-retiro`);
   }
 
   movimientos(cuentaId: number, opts: { desde?: string; hasta?: string }, pagina = 1, tamano = 20) {

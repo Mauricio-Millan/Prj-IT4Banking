@@ -1,0 +1,42 @@
+<div class="tar">
+  <header class="tar__header">
+    <span class="tar__brand">
+      <span class="tar__logo" aria-hidden="true"></span>
+      BancoCloud
+    </span>
+    <a routerLink="/" class="tar__volver">← Inicio</a>
+  </header>
+
+  <section class="tar__hero">
+    <span class="bc-eyebrow bc-reveal">Transparencia</span>
+    <h1 class="bc-reveal">Tarifario</h1>
+    <p class="bc-reveal">Sin comisión de mantenimiento. Solo cobramos por los servicios que realmente prestamos.</p>
+  </section>
+
+  @if (cargando()) {
+    <p class="tar__estado bc-reveal">Cargando tarifario…</p>
+  } @else if (error()) {
+    <p class="tar__estado tar__estado--error bc-reveal">No pudimos cargar el tarifario.</p>
+  } @else if (tarifario(); as t) {
+    <section class="bc-shell bc-reveal">
+      <div class="bc-core tar__tabla">
+        <div class="tar__fila tar__fila--cabecera">
+          <span>Concepto</span><span>Monto</span><span>Cuota gratuita</span>
+        </div>
+        @for (tarifa of t.tarifas; track tarifa.codigo) {
+          <div class="tar__fila">
+            <span>{{ tarifa.nombre }}</span>
+            <span [class.tar__gratis]="+tarifa.monto === 0">{{ +tarifa.monto === 0 ? 'Gratis' : (+tarifa.monto | currency:tarifa.moneda) }}</span>
+            <span>{{ tarifa.gratis_por_mes ? tarifa.gratis_por_mes + ' al mes' : '—' }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <p class="tar__nota bc-reveal">{{ t.nota_itf }}</p>
+  }
+
+  <footer class="tar__footer">
+    <p>Proyecto académico — no es una entidad financiera real.</p>
+  </footer>
+</div>

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.db import get_db
 from app.core.exceptions import RecursoNoEncontrado, SaldoInsuficiente
-from app.routers import auth, backoffice, cuentas, prestamos, quejas, tarjetas, transacciones
+from app.routers import auth, backoffice, cuentas, prestamos, quejas, tarifario, tarjetas, transacciones
 
 app = FastAPI(title=settings.app_name)
 app.add_middleware(
@@ -24,6 +24,7 @@ app.include_router(prestamos.router)
 app.include_router(transacciones.router)
 app.include_router(quejas.router)
 app.include_router(backoffice.router)
+app.include_router(tarifario.router)
 
 
 @app.exception_handler(RecursoNoEncontrado)

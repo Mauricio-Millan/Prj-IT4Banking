@@ -26,6 +26,18 @@
         }
       </select>
     </label>
+
+    @if (form.value.tipo === 'retiro' && comisionRetiro(); as com) {
+      @if (+com.monto === 0) {
+        <p class="tx__aviso-comision">
+          Retiros gratis restantes este mes: {{ com.retiros_gratis_restantes }}
+        </p>
+      } @else {
+        <p class="tx__aviso-comision tx__aviso-comision--cobra">
+          Esta operación tiene una comisión de S/ {{ com.monto }}.
+        </p>
+      }
+    }
   } @else {
     <label class="campo" [class.campo--error]="invalido('cuenta_destino_deposito')">
       <span class="campo__label">Cuenta a depositar</span>
@@ -50,6 +62,17 @@
       } @else {
         <span class="campo__hint">Pídele a la otra persona su número de cuenta (14 dígitos) o CCI (20 dígitos).</span>
       }
+    </label>
+  }
+
+  @if (form.value.tipo !== 'transferencia') {
+    <label class="campo" [class.campo--error]="invalido('canal')">
+      <span class="campo__label">Canal</span>
+      <select formControlName="canal">
+        <option [ngValue]="null" disabled>Selecciona un canal</option>
+        <option value="cajero">Cajero</option>
+        <option value="agente">Agente de red aliada</option>
+      </select>
     </label>
   }
 

@@ -16,8 +16,9 @@ from sqlalchemy.pool import StaticPool
 from app.core.db import get_db
 from app.core.security import crear_token, hash_password
 from app.main import app
-from app.models import Base, CuentaContable, Usuario
+from app.models import Base, CuentaContable, Tarifa, Usuario
 from app.models.contabilidad import filas_seed_plan_de_cuentas
+from app.models.tarifa import filas_seed_tarifario
 
 MARIA = {
     "tipo_documento": "DNI",
@@ -38,6 +39,7 @@ def db():
     Base.metadata.create_all(engine)
     with sessionmaker(bind=engine)() as s:
         s.add_all(CuentaContable(**fila) for fila in filas_seed_plan_de_cuentas())
+        s.add_all(Tarifa(**fila) for fila in filas_seed_tarifario())
         s.commit()
         yield s
 

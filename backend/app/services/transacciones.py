@@ -1,64 +1,36 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import insert, or_, select, update
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import AsientoDesbalanceado, RecursoNoEncontrado, SaldoInsuficiente
-from app.models import AsientoContable, AuditLog, Cuenta, MovimientoContable, Transaccion
-from app.models.contabilidad import CODIGO_CAJA, CODIGO_DEPOSITOS_VISTA, CuentaContable
+from app.core.exceptions import RecursoNoEncontrado
+from app.models import AuditLog, Cuenta, MovimientoContable, Transaccion
+from app.models.contabilidad import CODIGO_CAJA, CODIGO_DEPOSITOS_VISTA
 from app.schemas.transacciones import TransaccionIn
+from app.services import comisiones as comisiones_service
+from app.services.contabilidad import acreditar, cuenta_contable_id, debitar, registrar_asiento, verificar_balance  # noqa: F401 (verificar_balance re-exportado: ver tests/test_libro_mayor.py)
 
 
 class MonedaIncompatible(Exception):
     pass
 
 
-def _debitar(db: Session, cuenta_id: int, monto: Decimal) -> None:
-    # ponytail: guardia atomica a nivel de fila (UPDATE ... WHERE saldo >= monto); el motor
-    # serializa updates concurrentes sobre la misma fila, no hace falta un lock explicito.
-    # La resta ocurre en DECIMAL nativo de SQL Server, nunca en Python/float.
-    resultado = db.execute(
-        update(Cuenta).where(Cuenta.cuenta_id == cuenta_id, Cuenta.saldo >= monto).values(saldo=Cuenta.saldo - monto)
-    )
-    if resultado.rowcount == 0:
-        raise SaldoInsuficiente()
-
-
-def _acreditar(db: Session, cuenta_id: int, monto: Decimal) -> None:
-    db.execute(update(Cuenta).where(Cuenta.cuenta_id == cuenta_id).values(saldo=Cuenta.saldo + monto))
-
-
-def verificar_balance(movimientos: list[MovimientoContable]) -> None:
-    """Pura: Sigma DEBE debe ser igual a Sigma HABER. Separada de _registrar_asiento_partida_doble
-    para poder probarla directo con un asiento armado a mano (defensa en profundidad, V6)."""
-    suma_debe = sum(m.importe for m in movimientos if m.tipo_movimiento == "D")
-    suma_haber = sum(m.importe for m in movimientos if m.tipo_movimiento == "H")
-    if suma_debe != suma_haber:
-        raise AsientoDesbalanceado()
-
-
-def _cuenta_contable_id(db: Session, codigo: str) -> int:
-    id_ = db.scalar(select(CuentaContable.cuenta_contable_id).where(CuentaContable.codigo == codigo))
-    if id_ is None:
-        raise RuntimeError(f"Plan de cuentas incompleto: falta el codigo {codigo!r} (ver seed en la migracion)")
-    return id_
-
-
-def _registrar_asiento_partida_doble(
+def _registrar_asiento_operacion(
     db: Session, tipo_operacion: str, transaccion_id: int, monto: Decimal, moneda: str,
     cuenta_cliente_debe: int | None, cuenta_cliente_haber: int | None,
-) -> AsientoContable:
-    """Arma el asiento segun la operacion. La convencion contable es fija por tipo:
+) -> None:
+    """Arma el asiento de 2 lineas de deposito/retiro/transferencia. La convencion contable
+    es fija por tipo:
     deposito       -> DEBE Caja                 / HABER Depositos a la vista (cliente destino)
     retiro         -> DEBE Depositos a la vista (cliente origen) / HABER Caja
-    transferencia  -> DEBE Depositos a la vista (origen) / HABER Depositos a la vista (destino)
-    Nunca toca `transaccion` (la FK vive en asiento_contable.transaccion_id, ver §3.2 del doc)."""
+    transferencia  -> DEBE Depositos a la vista (origen) / HABER Depositos a la vista (destino)"""
     caja_id = None
     depositos_id = None
     if tipo_operacion in ("deposito", "retiro"):
-        caja_id = _cuenta_contable_id(db, CODIGO_CAJA)
+        caja_id = cuenta_contable_id(db, CODIGO_CAJA)
     if cuenta_cliente_debe is not None or cuenta_cliente_haber is not None:
-        depositos_id = _cuenta_contable_id(db, CODIGO_DEPOSITOS_VISTA)
+        depositos_id = cuenta_contable_id(db, CODIGO_DEPOSITOS_VISTA)
 
     if tipo_operacion == "deposito":
         movs = [
@@ -81,32 +53,7 @@ def _registrar_asiento_partida_doble(
             MovimientoContable(cuenta_contable_id=depositos_id, cuenta_cliente_id=cuenta_cliente_haber,
                                 tipo_movimiento="H", importe=monto, moneda=moneda),
         ]
-
-    verificar_balance(movs)  # V6: en codigo, ademas del trigger SQL trg_asiento_balanceado (defensa en profundidad)
-
-    asiento = AsientoContable(tipo_operacion=tipo_operacion, transaccion_id=transaccion_id, estado="contabilizado")
-    db.add(asiento)
-    db.flush()  # asiento_contable no tiene trigger: el OUTPUT normal de SQLAlchemy funciona aqui.
-
-    # ponytail: Core insert().values([...]) con las filas ya "horneadas" en el statement (no como
-    # parametros de .execute()) a proposito. movimiento_contable SI tiene trigger
-    # (trg_asiento_balanceado) y SQL Server prohibe OUTPUT sin INTO en una tabla con triggers
-    # habilitados; tanto el flush ORM normal como el "bulk insert" de execute(insert(Modelo), lista)
-    # intentan traer el id generado vía OUTPUT por defecto. Esta forma compila un solo INSERT
-    # multi-fila sin OUTPUT: el trigger ve las N filas del asiento juntas en `inserted`, y
-    # SQLAlchemy sigue convirtiendo Decimal->tipo de columna igual que en cualquier insert ORM.
-    db.execute(insert(MovimientoContable).values([
-        {
-            "asiento_id": asiento.asiento_id,
-            "cuenta_contable_id": m.cuenta_contable_id,
-            "cuenta_cliente_id": m.cuenta_cliente_id,
-            "tipo_movimiento": m.tipo_movimiento,
-            "importe": m.importe,
-            "moneda": m.moneda,
-        }
-        for m in movs
-    ]))
-    return asiento
+    registrar_asiento(db, tipo_operacion, transaccion_id, movs)
 
 
 def _resolver_destino(db: Session, valor: str) -> Cuenta | None:
@@ -116,11 +63,32 @@ def _resolver_destino(db: Session, valor: str) -> Cuenta | None:
     ))
 
 
-def crear(db: Session, cliente_id: int, usuario_id: int, datos: TransaccionIn, ip: str | None = None) -> Transaccion:
-    """RF-08: deposito/retiro/transferencia. Atomico: si algo falla antes del commit, nada se persiste
-    (ni el UPDATE de saldo, ni la transaccion, ni el asiento contable que la sustenta).
-    Canal fijo 'web' — no es un campo que el usuario elija."""
+def retiros_este_mes(db: Session, cuenta_id: int, hoy) -> int:
+    """Publica: routers/cuentas.py la reusa para GET /cuentas/{id}/comision-retiro."""
+    desde = datetime(hoy.year, hoy.month, 1, tzinfo=timezone.utc)
+    hasta = (datetime(hoy.year + 1, 1, 1, tzinfo=timezone.utc) if hoy.month == 12
+             else datetime(hoy.year, hoy.month + 1, 1, tzinfo=timezone.utc))
+    return db.scalar(
+        select(func.count()).select_from(Transaccion).where(
+            Transaccion.cuenta_origen_id == cuenta_id, Transaccion.tipo == "retiro",
+            Transaccion.estado == "aplicada", Transaccion.fecha_hora >= desde, Transaccion.fecha_hora < hasta,
+        )
+    )
+
+
+def crear(db: Session, cliente_id: int, usuario_id: int, datos: TransaccionIn, ip: str | None = None) -> dict:
+    """RF-08: deposito/retiro/transferencia. Atomico: si algo falla antes del commit, nada se
+    persiste (ni el UPDATE de saldo, ni la transaccion, ni el asiento, ni la comision).
+    canal: 'cajero'/'agente' para deposito/retiro (obligatorio, HU-Tarifario-Comisiones);
+    'web' fijo para transferencia (ver TransaccionIn)."""
     origen_id = destino_id = None
+    hoy = datetime.now(timezone.utc).date()
+    # Datos para cobrar RET-RED, calculados ANTES de insertar la transaccion de este retiro:
+    # si se calcularan despues, la cuenta "se contaria a si misma" como uno de los 3 gratis.
+    cuenta_para_comision = None
+    tarifa_comision = None
+    monto_comision = Decimal("0.00")
+    retiros_previos = 0
 
     if datos.tipo == "deposito":
         # el cliente solo deposita en cuentas propias: no basta con acertar el numero de otra persona
@@ -130,15 +98,18 @@ def crear(db: Session, cliente_id: int, usuario_id: int, datos: TransaccionIn, i
         ))
         if destino is None:
             raise RecursoNoEncontrado()
-        _acreditar(db, destino.cuenta_id, datos.monto)
+        acreditar(db, destino.cuenta_id, datos.monto)
         destino_id, moneda = destino.cuenta_id, destino.moneda
 
     elif datos.tipo == "retiro":
         origen = db.scalar(select(Cuenta).where(Cuenta.cuenta_id == datos.cuenta_origen_id, Cuenta.cliente_id == cliente_id))
         if origen is None:
             raise RecursoNoEncontrado()
-        _debitar(db, origen.cuenta_id, datos.monto)
+        retiros_previos = retiros_este_mes(db, origen.cuenta_id, hoy)
+        tarifa_comision, monto_comision = comisiones_service.calcular(db, "retiro", origen.cuenta_id, hoy)
+        debitar(db, origen.cuenta_id, datos.monto)
         origen_id, moneda = origen.cuenta_id, origen.moneda
+        cuenta_para_comision = origen.cuenta_id
 
     else:  # transferencia
         origen = db.scalar(select(Cuenta).where(Cuenta.cuenta_id == datos.cuenta_origen_id, Cuenta.cliente_id == cliente_id))
@@ -150,23 +121,32 @@ def crear(db: Session, cliente_id: int, usuario_id: int, datos: TransaccionIn, i
         if origen.moneda != destino.moneda:
             # ponytail: sin fuente de tipo de cambio en esta app; se rechaza en vez de convertir.
             raise MonedaIncompatible()
-        _debitar(db, origen.cuenta_id, datos.monto)
-        _acreditar(db, destino.cuenta_id, datos.monto)
+        debitar(db, origen.cuenta_id, datos.monto)
+        acreditar(db, destino.cuenta_id, datos.monto)
         origen_id, destino_id, moneda = origen.cuenta_id, destino.cuenta_id, origen.moneda
 
     transaccion = Transaccion(
         cuenta_origen_id=origen_id, cuenta_destino_id=destino_id,
-        tipo=datos.tipo, monto=datos.monto, canal="web", estado="aplicada",
+        tipo=datos.tipo, monto=datos.monto, canal=(datos.canal or "web"), estado="aplicada",
     )
     db.add(transaccion)
-    db.flush()  # obtiene transaccion_id, igual que ya hacia el codigo para el AuditLog
+    db.flush()  # obtiene transaccion_id
 
-    _registrar_asiento_partida_doble(
+    _registrar_asiento_operacion(
         db, datos.tipo, transaccion.transaccion_id, datos.monto, moneda,
         cuenta_cliente_debe=origen_id, cuenta_cliente_haber=destino_id,
     )
+
+    comision = None
+    if cuenta_para_comision is not None and monto_comision > 0:
+        concepto = f"Comisión: retiro en red aliada ({retiros_previos + 1}.º del mes)"
+        mensaje_error = f"Saldo insuficiente para el retiro más la comisión de S/ {tarifa_comision.monto:.2f}"
+        comisiones_service.cobrar(db, tarifa_comision, cuenta_para_comision, moneda,
+                                   transaccion.transaccion_id, concepto, mensaje_error)
+        comision = {"monto": monto_comision, "concepto": concepto}
+
     db.add(AuditLog(usuario_id=usuario_id, accion="crear", entidad="transaccion",
                      entidad_id=str(transaccion.transaccion_id), ip=ip))
     db.commit()
     db.refresh(transaccion)
-    return transaccion
+    return {"transaccion": transaccion, "comision": comision}

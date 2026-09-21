@@ -20,6 +20,23 @@
       <input formControlName="plazo" type="number" min="1" max="60" step="1" />
     </label>
 
+    <label class="campo" [class.campo--error]="invalido('cuenta_id')">
+      <span class="campo__label">Cuenta de desembolso</span>
+      <select formControlName="cuenta_id">
+        <option [ngValue]="null" disabled>Selecciona una cuenta</option>
+        @for (c of cuentas(); track c.cuenta_id) {
+          @if (c.moneda === 'PEN') {
+            <option [ngValue]="c.cuenta_id">N.° {{ c.numero_cuenta }}</option>
+          }
+        }
+      </select>
+      <span class="campo__hint">Si tu solicitud se aprueba, el dinero se acredita aquí.</span>
+    </label>
+
+    <p class="prest__nota-tea" title="La TCEA (tasa de costo efectivo anual) no está incluida en esta versión.">
+      La tasa mostrada es la TEA (tasa efectiva anual). No incluye la TCEA.
+    </p>
+
     @if (errorServidor()) {
       <p class="prest__error" role="alert">{{ errorServidor() }}</p>
     }
@@ -55,17 +72,32 @@
             <p class="prest__monto">{{ +p.monto_original | currency:'PEN' }} · {{ p.plazo }} meses · {{ p.tasa }}% TEA</p>
             @if (p.estado === 'vigente') {
               <p class="prest__meta">
-                Saldo {{ +p.saldo_capital | currency:'PEN' }}
-                @if (p.fecha_vencimiento) { · vence {{ p.fecha_vencimiento | date }} }
-                @if (p.dias_mora > 0) { · {{ p.dias_mora }} días de mora }
+                Saldo {{ +p.saldo_capital | currency:'PEN' }} · cuota {{ p.cuotas_pagadas }}/{{ p.cuotas_total }}
+                @if (p.proxima_cuota) {
+                  · próxima {{ +p.proxima_cuota.total | currency:'PEN' }} el {{ p.proxima_cuota.fecha_vencimiento | date }}
+                }
+              </p>
+              <p class="prest__meta">
+                @if (p.dias_mora > 0) {
+                  <span class="bc-tag bc-tag--warn">En mora ({{ p.dias_mora }} días)</span>
+                } @else {
+                  <span class="bc-tag bc-tag--ok">Al día</span>
+                }
               </p>
             }
           </div>
-          <span class="bc-tag" [class.bc-tag--ok]="p.estado === 'vigente'"
-                [class.bc-tag--warn]="p.estado === 'solicitado' || p.estado === 'aprobado'"
-                [class.bc-tag--off]="p.estado === 'rechazado' || p.estado === 'cancelado'">
-            {{ p.estado === 'solicitado' ? 'En revisión' : p.estado }}
-          </span>
+          <div class="prest__derecha">
+            <span class="bc-tag" [class.bc-tag--ok]="p.estado === 'vigente'"
+                  [class.bc-tag--warn]="p.estado === 'solicitado' || p.estado === 'aprobado'"
+                  [class.bc-tag--off]="p.estado === 'rechazado' || p.estado === 'cancelado'">
+              {{ p.estado === 'solicitado' ? 'En revisión' : p.estado }}
+            </span>
+            @if (p.estado === 'vigente') {
+              <a [routerLink]="['/prestamos', p.prestamo_id, 'cronograma']" class="bc-btn bc-btn--ghost">
+                Ver cronograma
+              </a>
+            }
+          </div>
         </article>
       }
     </div>

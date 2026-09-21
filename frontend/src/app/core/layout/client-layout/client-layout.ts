@@ -29,6 +29,7 @@ export class ClientLayout {
     { ruta: '/tarjetas', etiqueta: 'Tarjetas' },
     { ruta: '/prestamos', etiqueta: 'Préstamos' },
     { ruta: '/quejas', etiqueta: 'Quejas' },
+    { ruta: '/tarifas', etiqueta: 'Tarifario' },
   ]);
 
   protected readonly abierto = signal(false);

@@ -5,9 +5,11 @@ from app.core.auditoria import auditar_consulta
 from app.core.db import get_db
 from app.core.security import UsuarioActual, require_role
 from app.schemas.backoffice_clientes import ClienteConCuentasOut, ClientesPagina
+from app.schemas.clientes_empresa import ClienteEmpresaIn, ClienteEmpresaOut, EmpresaListadaOut
 from app.schemas.prestamos import DecisionPrestamoIn, PrestamoOut, PrestamoRevisionOut
 from app.schemas.usuarios_internos import ActualizarUsuarioInternoIn, EsEmpleadoIn, UsuarioInternoIn, UsuarioInternoOut
 from app.services import clientes as clientes_service
+from app.services import clientes_empresa as clientes_empresa_service
 from app.services import prestamos as prestamos_service
 from app.services import usuarios_internos as usuarios_internos_service
 
@@ -105,3 +107,40 @@ def marcar_es_empleado(
 ):
     usuarios_internos_service.marcar_es_empleado(db, cliente_id, datos.es_empleado, usuario.usuario_id,
                                                   ip=request.client.host if request.client else None)
+
+
+@router.post("/clientes-empresa", response_model=ClienteEmpresaOut, status_code=status.HTTP_201_CREATED)
+def crear_cliente_empresa(
+    datos: ClienteEmpresaIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario: UsuarioActual = Depends(require_role("admin")),
+):
+    try:
+        resultado = clientes_empresa_service.crear(db, datos, usuario.usuario_id,
+                                                     ip=request.client.host if request.client else None)
+    except clientes_empresa_service.RucDuplicado:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Ya existe una empresa con ese RUC")
+    except clientes_empresa_service.EmailDuplicado:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Ya existe un usuario con ese correo")
+
+    cliente, cuenta, tarjeta = resultado["cliente"], resultado["cuenta"], resultado["tarjeta"]
+    return ClienteEmpresaOut(
+        cliente_id=cliente.cliente_id, codigo_cliente=cliente.codigo_cliente, ruc=cliente.numero_documento,
+        razon_social=cliente.razon_social, cuenta_id=cuenta.cuenta_id, numero_cuenta=cuenta.numero_cuenta,
+        cci=cuenta.cci, password_temporal=resultado["password_temporal"], tarjeta=tarjeta,
+    )
+
+
+@router.get("/clientes-empresa", response_model=list[EmpresaListadaOut])
+def listar_clientes_empresa(
+    db: Session = Depends(get_db),
+    _=Depends(require_role("admin")),
+    __=Depends(auditar_consulta("clientes_empresa")),
+):
+    empresas = clientes_empresa_service.listar(db)
+    return [
+        EmpresaListadaOut(cliente_id=c.cliente_id, codigo_cliente=c.codigo_cliente, ruc=c.numero_documento,
+                           razon_social=c.razon_social, region=c.region, fecha_alta=c.fecha_alta, estado=c.estado)
+        for c in empresas
+    ]

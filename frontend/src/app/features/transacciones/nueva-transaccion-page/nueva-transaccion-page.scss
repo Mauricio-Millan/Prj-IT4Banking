@@ -26,6 +26,16 @@
     font-size: 0.9rem;
   }
 
+  &__aviso-comision {
+    margin: -0.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--bc-primary-deep);
+
+    &--cobra {
+      color: #8a5a00;
+    }
+  }
+
   &__acciones {
     margin-top: 0.5rem;
 

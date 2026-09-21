@@ -42,7 +42,7 @@ def listar(db: Session) -> list[Usuario]:
 def _admins_activos_excepto(db: Session, usuario_id: int) -> int:
     return db.scalar(
         select(func.count()).select_from(Usuario).where(
-            Usuario.rol == "admin", Usuario.activo.is_(True), Usuario.usuario_id != usuario_id,
+            Usuario.rol == "admin", Usuario.activo == True, Usuario.usuario_id != usuario_id,  # noqa: E712 (.is_(True) -> "IS 1", invalido en T-SQL)
         )
     )
 

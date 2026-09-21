@@ -67,7 +67,10 @@ def fecha_vencimiento_tarjeta(fecha_emision: date) -> date:
 class Transaccion(Base):
     __tablename__ = "transaccion"
     __table_args__ = (
-        CheckConstraint("tipo IN ('deposito','retiro','transferencia','pago_prestamo','comision')", name="ck_transaccion_tipo"),
+        CheckConstraint(
+            "tipo IN ('deposito','retiro','transferencia','pago_prestamo','comision','desembolso')",
+            name="ck_transaccion_tipo",
+        ),
         CheckConstraint("monto > 0", name="ck_transaccion_monto_positivo"),
         CheckConstraint("canal IN ('web','app','cajero','agente','sistema')", name="ck_transaccion_canal"),
         CheckConstraint("estado IN ('aplicada','rechazada','reversada')", name="ck_transaccion_estado"),
@@ -83,6 +86,10 @@ class Transaccion(Base):
     monto: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     canal: Mapped[str] = mapped_column(String(10))
     estado: Mapped[str] = mapped_column(String(20), default="aplicada")
+    # HU-Tarifario-Comisiones: para que los movimientos se expliquen solos ("Pago cuota 3/12",
+    # "Comisión: retiro en red aliada (4.º del mes)") y para ligar una comision a su operacion.
+    concepto: Mapped[str | None] = mapped_column(String(80))
+    transaccion_origen_id: Mapped[int | None] = mapped_column(ForeignKey("transaccion.transaccion_id"))
 
     # Python puro, sin columna nueva en transaccion: una transaccion puede sustentar varios
     # asientos (original + reversion). Ver AsientoContable en models/contabilidad.py.

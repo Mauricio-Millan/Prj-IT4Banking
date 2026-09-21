@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from app.core.pii import enmascarar_documento
 from app.schemas.comunes import Dinero
@@ -11,6 +11,30 @@ from app.schemas.comunes import Dinero
 class SolicitudPrestamoIn(BaseModel):
     monto_original: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
     plazo: int = Field(ge=1, le=60)
+    # cuenta propia (PEN, activa) donde se acredita el desembolso si se aprueba
+    cuenta_id: int
+
+
+class CuotaOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    cuota_id: int
+    numero: int
+    fecha_vencimiento: date
+    capital: Dinero
+    interes: Dinero
+    total: Dinero
+    saldo_capital_despues: Dinero
+    estado: str
+    fecha_pago: date | None
+    transaccion_id: int | None
+
+
+class ProximaCuotaOut(BaseModel):
+    numero: int
+    fecha_vencimiento: date
+    total: Dinero
+    estado: str
 
 
 class PrestamoOut(BaseModel):
@@ -24,6 +48,10 @@ class PrestamoOut(BaseModel):
     dias_mora: int
     bucket_mora: str
     estado: str
+    cuenta_desembolso_numero: str | None = None
+    cuotas_total: int = 0
+    cuotas_pagadas: int = 0
+    proxima_cuota: ProximaCuotaOut | None = None
 
 
 class PrestamoRevisionOut(PrestamoOut):
@@ -41,3 +69,21 @@ class PrestamoRevisionOut(PrestamoOut):
 
 class DecisionPrestamoIn(BaseModel):
     decision: Literal["aprobar", "rechazar"]
+
+
+class PagoPrestamoIn(BaseModel):
+    cuenta_origen_id: int
+
+
+class MontoConceptoOut(BaseModel):
+    monto: Dinero
+    concepto: str
+
+
+class PagoOut(BaseModel):
+    cuota: CuotaOut
+    transaccion_id: int
+    penalidad: MontoConceptoOut | None
+    total_debitado: Dinero
+    saldo_capital: Dinero
+    estado_prestamo: str

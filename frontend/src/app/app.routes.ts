@@ -15,7 +15,7 @@ import { ClientLayout } from './core/layout/client-layout/client-layout';
  */
 
 const PRIMER_SEGMENTO_CONOCIDO = new Set([
-  'login', 'registro', 'cuentas', 'transacciones', 'tarjetas', 'prestamos', 'quejas', 'backoffice',
+  'login', 'registro', 'cuentas', 'transacciones', 'tarjetas', 'prestamos', 'quejas', 'backoffice', 'tarifas',
 ]);
 
 // canMatch se evalua ANTES de intentar los hijos: authGuard en ClientLayout (path:'') intercepta
@@ -57,6 +57,9 @@ export const routes: Routes = [
     canMatch: [invitadoGuard],
     loadComponent: () => import('./features/landing/landing-page/landing-page').then(m => m.LandingPage),
   },
+  // Publica, sin guard: la HU exige que un visitante sin sesion Y un cliente ya autenticado
+  // puedan verla igual (enlazada desde el pie de la landing y desde el menu del cliente).
+  { path: 'tarifas', loadComponent: () => import('./features/tarifario/tarifas-page/tarifas-page').then(m => m.TarifasPage) },
   {
     path: '',
     component: ClientLayout,
@@ -66,6 +69,7 @@ export const routes: Routes = [
       { path: 'transacciones/nueva', loadComponent: () => import('./features/transacciones/nueva-transaccion-page/nueva-transaccion-page').then(m => m.NuevaTransaccionPage) },
       { path: 'tarjetas', loadComponent: () => import('./features/tarjetas/tarjetas-page/tarjetas-page').then(m => m.TarjetasPage) },
       { path: 'prestamos', loadComponent: () => import('./features/prestamos/prestamos-page/prestamos-page').then(m => m.PrestamosPage) },
+      { path: 'prestamos/:id/cronograma', loadComponent: () => import('./features/prestamos/cronograma-page/cronograma-page').then(m => m.CronogramaPage) },
       { path: 'quejas', loadComponent: () => import('./features/quejas/queja-page/queja-page').then(m => m.QuejaPage) },
     ],
   },

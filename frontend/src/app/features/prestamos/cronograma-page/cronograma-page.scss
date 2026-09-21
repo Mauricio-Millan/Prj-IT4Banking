@@ -1,0 +1,77 @@
+.cro {
+  &__head {
+    margin-bottom: 1.5rem;
+  }
+
+  &__volver {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__estado {
+    padding: 2rem 0;
+    color: var(--bc-ink-3);
+
+    &--error {
+      color: var(--bc-danger);
+    }
+  }
+
+  &__tabla {
+    padding: 0.5rem;
+    overflow-x: auto;
+  }
+
+  &__fila {
+    display: grid;
+    grid-template-columns: 2.5rem 7rem 6rem 6rem 6rem 6rem 8rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
+
+    &--cabecera {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--bc-ink-3);
+      border-bottom: 1px solid var(--bc-hairline);
+    }
+
+    &--impaga {
+      background: var(--bc-primary-soft);
+      border-radius: var(--bc-r-md);
+      font-weight: 600;
+    }
+  }
+
+  &__modal {
+    position: fixed;
+    inset: 0;
+    background: rgb(0 0 0 / 0.5);
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    z-index: 50;
+
+    &-caja {
+      width: min(24rem, 100%);
+      padding: 1.5rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    &-acciones {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--bc-danger);
+    font-size: 0.85rem;
+  }
+}

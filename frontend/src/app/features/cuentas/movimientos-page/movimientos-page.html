@@ -34,6 +34,9 @@
           <div>
             <p class="mov__tipo">{{ etiquetaTipo[m.tipo] }}</p>
             <p class="mov__meta">{{ m.fecha_hora | date:'d MMM y, HH:mm' }} · {{ m.canal }}</p>
+            @if (m.concepto) {
+              <p class="mov__meta">{{ m.concepto }}</p>
+            }
             @if (m.tipo === 'transferencia') {
               <p class="mov__meta">
                 {{ m.direccion === 'entrada' ? 'De' : 'A' }} N.°

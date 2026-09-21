@@ -17,7 +17,11 @@ export class BackofficeLayout {
     { ruta: '/backoffice/prestamos', etiqueta: 'Préstamos por aprobar' },
     { ruta: '/backoffice/quejas', etiqueta: 'Quejas por revisar' },
     ...(this.auth.rol() === 'admin'
-      ? [{ ruta: '/backoffice/clientes', etiqueta: 'Clientes' }, { ruta: '/backoffice/usuarios', etiqueta: 'Usuarios' }]
+      ? [
+          { ruta: '/backoffice/clientes', etiqueta: 'Clientes' },
+          { ruta: '/backoffice/empresas', etiqueta: 'Empresas' },
+          { ruta: '/backoffice/usuarios', etiqueta: 'Usuarios' },
+        ]
       : []),
     { ruta: '/cuentas', etiqueta: 'Vista cliente' },
   ]);

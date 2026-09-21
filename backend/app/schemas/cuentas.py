@@ -23,3 +23,9 @@ class SaldoOut(BaseModel):
     numero_cuenta: str
     moneda: str
     saldo: Dinero
+
+
+class ComisionRetiroOut(BaseModel):
+    monto: Dinero
+    # None si la tarifa no tiene cuota gratuita; si la tiene, cuantos retiros gratis quedan este mes.
+    retiros_gratis_restantes: int | None

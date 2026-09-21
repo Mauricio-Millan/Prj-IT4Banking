@@ -36,3 +36,46 @@ SELECT t.transaccion_id, t.tipo, t.monto
 FROM transaccion t
 LEFT JOIN asiento_contable ac ON ac.transaccion_id = t.transaccion_id AND ac.tipo_operacion <> 'reversion'
 WHERE t.estado = 'aplicada' AND ac.asiento_id IS NULL;
+
+-- 4) HU-Ciclo-Vida-Prestamo V9: Sigma saldo_capital de prestamos vigentes debe ser igual al
+--    saldo de la cuenta contable 1301 (Prestamos por cobrar): Sigma DEBE - Sigma HABER.
+--    Una sola fila con la diferencia; debe ser 0.
+SELECT
+    (SELECT COALESCE(SUM(saldo_capital), 0) FROM prestamo WHERE estado = 'vigente') AS suma_saldo_capital_vigentes,
+    (SELECT COALESCE(SUM(CASE WHEN mc.tipo_movimiento = 'D' THEN mc.importe ELSE -mc.importe END), 0)
+     FROM movimiento_contable mc
+     JOIN cuenta_contable cc ON cc.cuenta_contable_id = mc.cuenta_contable_id
+     WHERE cc.codigo = '1301') AS saldo_1301,
+    (SELECT COALESCE(SUM(saldo_capital), 0) FROM prestamo WHERE estado = 'vigente')
+    - (SELECT COALESCE(SUM(CASE WHEN mc.tipo_movimiento = 'D' THEN mc.importe ELSE -mc.importe END), 0)
+       FROM movimiento_contable mc
+       JOIN cuenta_contable cc ON cc.cuenta_contable_id = mc.cuenta_contable_id
+       WHERE cc.codigo = '1301') AS diferencia;
+
+-- 5) HU-Ciclo-Vida-Prestamo V9: Sigma interes de cuotas pagadas debe ser igual al saldo de la
+--    cuenta contable 4201 (Ingresos por intereses): Sigma HABER - Sigma DEBE.
+SELECT
+    (SELECT COALESCE(SUM(interes), 0) FROM cuota WHERE estado = 'pagada') AS suma_interes_pagado,
+    (SELECT COALESCE(SUM(CASE WHEN mc.tipo_movimiento = 'H' THEN mc.importe ELSE -mc.importe END), 0)
+     FROM movimiento_contable mc
+     JOIN cuenta_contable cc ON cc.cuenta_contable_id = mc.cuenta_contable_id
+     WHERE cc.codigo = '4201') AS saldo_4201,
+    (SELECT COALESCE(SUM(interes), 0) FROM cuota WHERE estado = 'pagada')
+    - (SELECT COALESCE(SUM(CASE WHEN mc.tipo_movimiento = 'H' THEN mc.importe ELSE -mc.importe END), 0)
+       FROM movimiento_contable mc
+       JOIN cuenta_contable cc ON cc.cuenta_contable_id = mc.cuenta_contable_id
+       WHERE cc.codigo = '4201') AS diferencia;
+
+-- 6) HU-Tarifario-Comisiones V8: Sigma monto de transacciones comision aplicadas debe ser
+--    igual al saldo de la cuenta contable 4101 (Ingresos por comision): Sigma HABER - Sigma DEBE.
+SELECT
+    (SELECT COALESCE(SUM(monto), 0) FROM transaccion WHERE tipo = 'comision' AND estado = 'aplicada') AS suma_comisiones,
+    (SELECT COALESCE(SUM(CASE WHEN mc.tipo_movimiento = 'H' THEN mc.importe ELSE -mc.importe END), 0)
+     FROM movimiento_contable mc
+     JOIN cuenta_contable cc ON cc.cuenta_contable_id = mc.cuenta_contable_id
+     WHERE cc.codigo = '4101') AS saldo_4101,
+    (SELECT COALESCE(SUM(monto), 0) FROM transaccion WHERE tipo = 'comision' AND estado = 'aplicada')
+    - (SELECT COALESCE(SUM(CASE WHEN mc.tipo_movimiento = 'H' THEN mc.importe ELSE -mc.importe END), 0)
+       FROM movimiento_contable mc
+       JOIN cuenta_contable cc ON cc.cuenta_contable_id = mc.cuenta_contable_id
+       WHERE cc.codigo = '4101') AS diferencia;

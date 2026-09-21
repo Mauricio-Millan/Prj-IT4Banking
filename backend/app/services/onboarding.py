@@ -22,7 +22,7 @@ def segmento_por_edad(fecha_nacimiento: date) -> str:
     return "joven" if edad < 30 else "clasico"
 
 
-def _codigo_cliente_disponible(db: Session) -> str:
+def codigo_cliente_disponible(db: Session) -> str:
     for _ in range(5):
         codigo = generar_codigo_cliente()
         if not db.scalar(select(Cliente.cliente_id).where(Cliente.codigo_cliente == codigo)):
@@ -30,7 +30,7 @@ def _codigo_cliente_disponible(db: Session) -> str:
     raise RuntimeError("No se pudo generar un codigo_cliente unico tras varios intentos")  # pragma: no cover
 
 
-def _numero_cuenta_disponible(db: Session, moneda: str) -> str:
+def numero_cuenta_disponible(db: Session, moneda: str) -> str:
     for _ in range(5):
         numero = generar_numero_cuenta(moneda)
         if not db.scalar(select(Cuenta.cuenta_id).where(Cuenta.numero_cuenta == numero)):
@@ -50,7 +50,7 @@ def registrar(db: Session, datos: RegistroIn, ip: str | None = None) -> tuple[Cl
         raise ClienteDuplicado("email")
 
     cliente = Cliente(
-        codigo_cliente=_codigo_cliente_disponible(db),
+        codigo_cliente=codigo_cliente_disponible(db),
         tipo_documento=datos.tipo_documento,
         numero_documento=datos.numero_documento,
         nombres=datos.nombres,
@@ -62,7 +62,7 @@ def registrar(db: Session, datos: RegistroIn, ip: str | None = None) -> tuple[Cl
         segmento=segmento_por_edad(datos.fecha_nacimiento),
     )
     usuario = Usuario(cliente=cliente, email=datos.email, password_hash=hash_password(datos.password), rol="cliente")
-    numero_cuenta = _numero_cuenta_disponible(db, "PEN")
+    numero_cuenta = numero_cuenta_disponible(db, "PEN")
     cuenta = Cuenta(
         cliente=cliente, tipo_cuenta="ahorro", moneda="PEN", saldo=0,
         numero_cuenta=numero_cuenta, cci=cci_de(numero_cuenta),

@@ -47,6 +47,19 @@
     cursor: progress;
   }
 
+  &__nota-tea {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__derecha {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+  }
+
   &__subtitulo {
     margin: 2.5rem 0 1rem;
   }

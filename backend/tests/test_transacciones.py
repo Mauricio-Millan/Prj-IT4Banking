@@ -15,18 +15,25 @@ def _numero(db, cuenta_id):
 def test_deposito_suma_monto_exacto(cliente, registrado, db):
     headers, _, cuenta_id = registrado()
     r = cliente.post("/transacciones", headers=headers,
-                      json={"tipo": "deposito", "monto": "150.75", "cuenta_destino": _numero(db, cuenta_id)})
+                      json={"tipo": "deposito", "monto": "150.75", "cuenta_destino": _numero(db, cuenta_id), "canal": "agente"})
     assert r.status_code == 201, r.text
     assert r.json()["monto"] == "150.75"
     assert _saldo(cliente, headers, cuenta_id) == Decimal("150.75")
 
 
+def test_deposito_sin_canal_da_422(cliente, registrado, db):
+    headers, _, cuenta_id = registrado()
+    r = cliente.post("/transacciones", headers=headers,
+                      json={"tipo": "deposito", "monto": "150.75", "cuenta_destino": _numero(db, cuenta_id)})
+    assert r.status_code == 422
+
+
 def test_retiro_resta_monto_exacto(cliente, registrado, db):
     headers, _, cuenta_id = registrado()
     cliente.post("/transacciones", headers=headers,
-                 json={"tipo": "deposito", "monto": "100.00", "cuenta_destino": _numero(db, cuenta_id)})
+                 json={"tipo": "deposito", "monto": "100.00", "cuenta_destino": _numero(db, cuenta_id), "canal": "agente"})
     r = cliente.post("/transacciones", headers=headers,
-                      json={"tipo": "retiro", "monto": "30.00", "cuenta_origen_id": cuenta_id})
+                      json={"tipo": "retiro", "monto": "30.00", "cuenta_origen_id": cuenta_id, "canal": "cajero"})
     assert r.status_code == 201, r.text
     assert _saldo(cliente, headers, cuenta_id) == Decimal("70.00")
 
@@ -34,7 +41,7 @@ def test_retiro_resta_monto_exacto(cliente, registrado, db):
 def test_retiro_con_saldo_insuficiente_no_modifica_nada(cliente, registrado):
     headers, _, cuenta_id = registrado()
     r = cliente.post("/transacciones", headers=headers,
-                      json={"tipo": "retiro", "monto": "10.00", "cuenta_origen_id": cuenta_id})
+                      json={"tipo": "retiro", "monto": "10.00", "cuenta_origen_id": cuenta_id, "canal": "cajero"})
     assert r.status_code == 422
     assert _saldo(cliente, headers, cuenta_id) == Decimal("0")
 
@@ -43,7 +50,7 @@ def test_transferencia_mueve_monto_exacto_entre_cuentas(cliente, registrado, db)
     headers_a, _, cuenta_a = registrado()
     headers_b, _, cuenta_b = registrado(numero_documento="70011223", email="otra@correo.pe")
     cliente.post("/transacciones", headers=headers_a,
-                 json={"tipo": "deposito", "monto": "500.00", "cuenta_destino": _numero(db, cuenta_a)})
+                 json={"tipo": "deposito", "monto": "500.00", "cuenta_destino": _numero(db, cuenta_a), "canal": "agente"})
 
     r = cliente.post("/transacciones", headers=headers_a,
                       json={"tipo": "transferencia", "monto": "199.99",
@@ -65,7 +72,7 @@ def test_transferencia_entre_monedas_distintas_rechazada(cliente, registrado, db
     db.commit()
 
     cliente.post("/transacciones", headers=headers_a,
-                 json={"tipo": "deposito", "monto": "500.00", "cuenta_destino": _numero(db, cuenta_a)})
+                 json={"tipo": "deposito", "monto": "500.00", "cuenta_destino": _numero(db, cuenta_a), "canal": "agente"})
     r = cliente.post("/transacciones", headers=headers_a,
                       json={"tipo": "transferencia", "monto": "50.00",
                             "cuenta_origen_id": cuenta_a, "cuenta_destino": numero_usd})
@@ -76,7 +83,7 @@ def test_transferencia_entre_monedas_distintas_rechazada(cliente, registrado, db
 def test_transferencia_a_cuenta_inexistente_da_404(cliente, registrado, db):
     headers, _, cuenta_a = registrado()
     cliente.post("/transacciones", headers=headers,
-                 json={"tipo": "deposito", "monto": "500.00", "cuenta_destino": _numero(db, cuenta_a)})
+                 json={"tipo": "deposito", "monto": "500.00", "cuenta_destino": _numero(db, cuenta_a), "canal": "agente"})
     r = cliente.post("/transacciones", headers=headers,
                       json={"tipo": "transferencia", "monto": "50.00",
                             "cuenta_origen_id": cuenta_a, "cuenta_destino": generar_numero_cuenta("PEN")})
@@ -87,5 +94,5 @@ def test_no_puede_operar_cuenta_origen_ajena(cliente, registrado):
     _, _, cuenta_a = registrado()
     headers_b, _, _ = registrado(numero_documento="70011223", email="otra@correo.pe")
     r = cliente.post("/transacciones", headers=headers_b,
-                      json={"tipo": "retiro", "monto": "1.00", "cuenta_origen_id": cuenta_a})
+                      json={"tipo": "retiro", "monto": "1.00", "cuenta_origen_id": cuenta_a, "canal": "cajero"})
     assert r.status_code == 404

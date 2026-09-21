@@ -1,0 +1,73 @@
+<header class="cro__head bc-reveal">
+  <a routerLink="/prestamos" class="cro__volver">← Mis préstamos</a>
+  <span class="bc-eyebrow">Mi banco</span>
+  <h1>Cronograma de pagos</h1>
+</header>
+
+@if (cargando()) {
+  <p class="cro__estado bc-reveal">Cargando cronograma…</p>
+} @else if (error()) {
+  <p class="cro__estado cro__estado--error bc-reveal">No pudimos cargar el cronograma.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core cro__tabla">
+      <div class="cro__fila cro__fila--cabecera">
+        <span>N.°</span><span>Vencimiento</span><span>Capital</span><span>Interés</span><span>Total</span><span>Estado</span><span></span>
+      </div>
+      @for (c of cuotas(); track c.cuota_id) {
+        <div class="cro__fila" [class.cro__fila--impaga]="c.cuota_id === primeraImpaga()?.cuota_id">
+          <span>{{ c.numero }}</span>
+          <span>{{ c.fecha_vencimiento | date }}</span>
+          <span>{{ +c.capital | currency:'PEN' }}</span>
+          <span>{{ +c.interes | currency:'PEN' }}</span>
+          <span>{{ +c.total | currency:'PEN' }}</span>
+          <span class="bc-tag" [class.bc-tag--ok]="c.estado === 'pagada'"
+                [class.bc-tag--warn]="c.estado === 'vencida'" [class.bc-tag--off]="false">
+            {{ c.estado }}
+          </span>
+          <span>
+            @if (c.cuota_id === primeraImpaga()?.cuota_id) {
+              <button type="button" class="bc-btn bc-btn--primary" (click)="abrirPago()">Pagar cuota</button>
+            }
+          </span>
+        </div>
+      }
+    </div>
+  </section>
+}
+
+@if (modalAbierto()) {
+  <div class="cro__modal" role="dialog" aria-modal="true">
+    <div class="bc-shell bc-core cro__modal-caja">
+      <h2>Confirmar pago</h2>
+      @if (primeraImpaga(); as cuota) {
+        <p>
+          Cuota {{ +cuota.total | currency:'PEN' }}
+          @if (cuota.estado === 'vencida' && montoPenalidad()) {
+            + penalidad por atraso {{ +montoPenalidad()! | currency:'PEN' }} = {{ +totalAPagar()! | currency:'PEN' }}
+          }
+        </p>
+      }
+      <label class="campo">
+        <span class="campo__label">Cuenta a debitar</span>
+        <select [ngModel]="cuentaSeleccionada()" (ngModelChange)="cuentaSeleccionada.set($event)" [ngModelOptions]="{standalone: true}">
+          <option [ngValue]="null" disabled>Selecciona una cuenta</option>
+          @for (c of cuentas(); track c.cuenta_id) {
+            @if (c.moneda === 'PEN') {
+              <option [ngValue]="c.cuenta_id">N.° {{ c.numero_cuenta }} · saldo {{ +c.saldo | currency:'PEN' }}</option>
+            }
+          }
+        </select>
+      </label>
+      @if (errorPago()) {
+        <p class="cro__error" role="alert">{{ errorPago() }}</p>
+      }
+      <div class="cro__modal-acciones">
+        <button type="button" class="bc-btn bc-btn--ghost" (click)="cerrarPago()">Cancelar</button>
+        <button type="button" class="bc-btn bc-btn--primary" [disabled]="pagando() || cuentaSeleccionada() === null" (click)="confirmarPago()">
+          {{ pagando() ? 'Procesando…' : 'Confirmar pago' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

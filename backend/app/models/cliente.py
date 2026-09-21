@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, String, UniqueConstraint, func, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -9,12 +9,17 @@ from app.core.db import Base
 class Cliente(Base):
     __tablename__ = "cliente"
     __table_args__ = (
-        CheckConstraint("tipo_documento IN ('DNI','CE','PASAPORTE')", name="ck_cliente_tipo_documento"),
+        CheckConstraint("tipo_documento IN ('DNI','CE','PASAPORTE','RUC')", name="ck_cliente_tipo_documento"),
         CheckConstraint("segmento IN ('joven','clasico','premium','empresa')", name="ck_cliente_segmento"),
         CheckConstraint("estado IN ('activo','bloqueado','cerrado')", name="ck_cliente_estado"),
         # un pasaporte "12345678" y un DNI "12345678" son personas distintas: el UNIQUE es
         # sobre el par, no solo sobre numero_documento (HU-Numeracion-Bancaria).
         UniqueConstraint("tipo_documento", "numero_documento", name="uq_cliente_tipo_numero_documento"),
+        # HU-Segmentacion-Clientes V1/V2: razon_social solo existe (y es obligatoria) para RUC.
+        CheckConstraint(
+            "(tipo_documento = 'RUC' AND razon_social IS NOT NULL) OR (tipo_documento <> 'RUC' AND razon_social IS NULL)",
+            name="ck_cliente_razon_social",
+        ),
     )
 
     cliente_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -23,8 +28,13 @@ class Cliente(Base):
     codigo_cliente: Mapped[str] = mapped_column(String(10), unique=True)
     tipo_documento: Mapped[str] = mapped_column(String(10))
     numero_documento: Mapped[str] = mapped_column(String(20))
+    # Solo para tipo_documento='RUC' (HU-Segmentacion-Clientes): la razon social de la empresa.
+    # nombres/apellidos en ese caso identifican al REPRESENTANTE (quien inicia sesion), no a la empresa.
+    razon_social: Mapped[str | None] = mapped_column(String(150))
     nombres: Mapped[str] = mapped_column(String(100))
     apellidos: Mapped[str] = mapped_column(String(100))
+    # Para RUC: fecha de constitucion de la empresa (se reutiliza la columna, no se agrega una
+    # nueva). No se usa en ningun calculo: reevaluar_segmento retorna antes para 'empresa' (V8).
     fecha_nacimiento: Mapped[date] = mapped_column(Date)
     email: Mapped[str] = mapped_column(String(150), unique=True)
     telefono: Mapped[str | None] = mapped_column(String(20))
@@ -35,6 +45,9 @@ class Cliente(Base):
     # HU-Gestion-Usuarios-Internos-Backoffice V13: un caso de un cliente que ademas es
     # empleado del banco solo lo resuelve un admin (conflicto de interes).
     es_empleado: Mapped[bool] = mapped_column(Boolean, default=False)
+    # HU-Segmentacion-Clientes V9: histeresis del descenso desde premium (dias consecutivos
+    # bajo el umbral de saldo). Solo lo tocan reevaluar_segmento y el reset a 0 al recuperar premium.
+    dias_bajo_umbral_premium: Mapped[int] = mapped_column(Integer, default=0)
 
     usuario: Mapped["Usuario"] = relationship(back_populates="cliente", uselist=False)
     cuentas: Mapped[list["Cuenta"]] = relationship(back_populates="cliente")  # noqa: F821

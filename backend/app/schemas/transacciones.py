@@ -16,6 +16,9 @@ class TransaccionIn(BaseModel):
     cuenta_origen_id: int | None = None
     # numero_cuenta (14 digitos) o cci (20 digitos) de destino: lo que el cliente escribe
     cuenta_destino: str | None = None
+    # HU-Tarifario-Comisiones: canal real, no fijo. 'web' no es valido para deposito/retiro
+    # (ocurren en cajero o agente, nunca en la app); transferencia siempre es 'web' y no se tipea.
+    canal: Literal["cajero", "agente"] | None = None
 
     @field_validator("cuenta_destino")
     @classmethod
@@ -45,7 +48,14 @@ class TransaccionIn(BaseModel):
             raise ValueError("cuenta_origen_id es requerido para un retiro")
         if self.tipo == "transferencia" and (self.cuenta_origen_id is None or self.cuenta_destino is None):
             raise ValueError("una transferencia requiere cuenta_origen_id y cuenta_destino")
+        if self.tipo in ("deposito", "retiro") and self.canal is None:
+            raise ValueError("canal es requerido para depósito o retiro ('cajero' o 'agente')")
         return self
+
+
+class ComisionOut(BaseModel):
+    monto: Dinero
+    concepto: str
 
 
 class TransaccionOut(BaseModel):
@@ -55,10 +65,12 @@ class TransaccionOut(BaseModel):
     monto: Dinero
     canal: str
     estado: str
+    concepto: str | None = None
     cuenta_origen_id: int | None
     cuenta_destino_id: int | None
     cuenta_origen_numero: str | None = None
     cuenta_destino_numero: str | None = None
+    comision: ComisionOut | None = None
 
 
 class MovimientoOut(TransaccionOut):

@@ -15,5 +15,10 @@ export const BACKOFFICE_ROUTES: Routes = [
     canMatch: [roleGuard(['admin'])],
     loadComponent: () => import('./clientes-page/clientes-page').then(m => m.ClientesPage),
   },
+  {
+    path: 'empresas',
+    canMatch: [roleGuard(['admin'])],
+    loadComponent: () => import('./empresas-page/empresas-page').then(m => m.EmpresasPage),
+  },
   // 'resumenes' se agrega con RF-10
 ];

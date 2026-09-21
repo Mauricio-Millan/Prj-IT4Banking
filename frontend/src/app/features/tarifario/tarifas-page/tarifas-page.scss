@@ -1,0 +1,97 @@
+.tar {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 3rem;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0 2rem;
+  }
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  &__logo {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    background: var(--bc-primary);
+    box-shadow: 0 0 0 4px var(--bc-primary-soft);
+    flex-shrink: 0;
+  }
+
+  &__volver {
+    font-size: 0.85rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__hero {
+    margin-bottom: 2rem;
+
+    h1 {
+      margin: 0.75rem 0 0.5rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--bc-ink-3);
+    }
+  }
+
+  &__estado {
+    padding: 2rem 0;
+    color: var(--bc-ink-3);
+
+    &--error {
+      color: var(--bc-danger);
+    }
+  }
+
+  &__tabla {
+    padding: 0.5rem;
+  }
+
+  &__fila {
+    display: grid;
+    grid-template-columns: 1fr 8rem 8rem;
+    gap: 1rem;
+    padding: 0.85rem 0.75rem;
+    align-items: center;
+
+    &--cabecera {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--bc-ink-3);
+      border-bottom: 1px solid var(--bc-hairline);
+    }
+
+    &:not(&--cabecera) + &:not(&--cabecera) {
+      border-top: 1px solid var(--bc-hairline);
+    }
+  }
+
+  &__gratis {
+    color: var(--bc-primary-deep);
+    font-weight: 600;
+  }
+
+  &__nota {
+    margin-top: 1.25rem;
+    font-size: 0.8rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__footer {
+    margin-top: 3rem;
+    font-size: 0.8rem;
+    color: var(--bc-ink-3);
+    text-align: center;
+  }
+}
