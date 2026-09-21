@@ -1,0 +1,75 @@
+<header class="tx__head bc-reveal">
+  <a routerLink="/cuentas" class="tx__volver">← Mis cuentas</a>
+  <span class="bc-eyebrow">Operación</span>
+  <h1>Nueva transacción</h1>
+  <p>Deposita en tu cuenta, retira o transfiere a otra cuenta.</p>
+</header>
+
+<section class="bc-shell bc-reveal">
+<form [formGroup]="form" (ngSubmit)="enviar()" novalidate class="bc-core tx__form">
+  <label class="campo">
+    <span class="campo__label">Tipo de operación</span>
+    <select formControlName="tipo">
+      <option value="deposito">Depósito a mi cuenta</option>
+      <option value="retiro">Retiro de mi cuenta</option>
+      <option value="transferencia">Transferencia a otra cuenta</option>
+    </select>
+  </label>
+
+  @if (form.value.tipo !== 'deposito') {
+    <label class="campo" [class.campo--error]="invalido('cuenta_origen_id')">
+      <span class="campo__label">Cuenta origen</span>
+      <select formControlName="cuenta_origen_id">
+        <option [ngValue]="null" disabled>Selecciona una cuenta</option>
+        @for (c of cuentas(); track c.cuenta_id) {
+          <option [ngValue]="c.cuenta_id">N.° {{ c.numero_cuenta | agruparDigitos }} · {{ c.moneda }}</option>
+        }
+      </select>
+    </label>
+  } @else {
+    <label class="campo" [class.campo--error]="invalido('cuenta_destino_deposito')">
+      <span class="campo__label">Cuenta a depositar</span>
+      <select formControlName="cuenta_destino_deposito">
+        <option [ngValue]="null" disabled>Selecciona una cuenta</option>
+        @for (c of cuentas(); track c.cuenta_id) {
+          <option [ngValue]="c.numero_cuenta">N.° {{ c.numero_cuenta | agruparDigitos }} · {{ c.moneda }}</option>
+        }
+      </select>
+    </label>
+  }
+
+  @if (form.value.tipo === 'transferencia') {
+    <label class="campo" [class.campo--error]="invalido('cuenta_destino_transferencia')">
+      <span class="campo__label">Número de cuenta o CCI destino</span>
+      <input formControlName="cuenta_destino_transferencia" type="text" inputmode="numeric"
+             placeholder="Ej. 0011 0384 7261 19" />
+      @if (invalido('cuenta_destino_transferencia')) {
+        <span class="campo__hint campo__hint--error">
+          {{ form.get('cuenta_destino_transferencia')!.errors?.['numeroCuenta'] ?? 'Ingresa un número de cuenta o CCI válido.' }}
+        </span>
+      } @else {
+        <span class="campo__hint">Pídele a la otra persona su número de cuenta (14 dígitos) o CCI (20 dígitos).</span>
+      }
+    </label>
+  }
+
+  <label class="campo" [class.campo--error]="invalido('monto')">
+    <span class="campo__label">Monto</span>
+    <input formControlName="monto" type="text" inputmode="decimal" placeholder="0.00" />
+    @if (invalido('monto')) {
+      <span class="campo__hint campo__hint--error">Ingresa un monto válido, con máximo 2 decimales.</span>
+    }
+  </label>
+
+  @if (errorServidor()) {
+    <p class="tx__error" role="alert">{{ errorServidor() }}</p>
+  }
+
+  <div class="tx__acciones">
+    <button type="submit" class="bc-btn bc-btn--primary" [disabled]="enviando() || destinoTransferenciaInvalido()">
+      {{ enviando() ? 'Procesando…' : 'Confirmar operación' }}
+      <span class="bc-btn__icon" aria-hidden="true">→</span>
+    </button>
+  </div>
+</form>
+</section>

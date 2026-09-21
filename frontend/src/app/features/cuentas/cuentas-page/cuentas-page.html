@@ -1,0 +1,46 @@
+<header class="cuentas__head bc-reveal">
+  <div>
+    <span class="bc-eyebrow">Mi banco</span>
+    <h1>Mis cuentas</h1>
+  </div>
+  <a routerLink="/transacciones/nueva" class="bc-btn bc-btn--primary">
+    Nueva transacción
+    <span class="bc-btn__icon" aria-hidden="true">→</span>
+  </a>
+</header>
+
+@if (cargando()) {
+  <p class="cuentas__estado bc-reveal">Cargando tus cuentas…</p>
+} @else if (error()) {
+  <p class="cuentas__estado cuentas__estado--error bc-reveal">No pudimos cargar tus cuentas. Intenta de nuevo más tarde.</p>
+} @else if (cuentas().length === 0) {
+  <p class="cuentas__estado bc-reveal">Todavía no tienes cuentas.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core cuentas__lista">
+      @for (c of cuentas(); track c.cuenta_id) {
+        <article class="cuentas__fila">
+          <div>
+            <p class="cuentas__tipo">{{ etiquetaTipo[c.tipo_cuenta] }}</p>
+            <p class="cuentas__meta">N.° {{ c.numero_cuenta | agruparDigitos }} · {{ c.moneda }} · desde {{ c.fecha_apertura | date }}</p>
+            <p class="cuentas__meta">CCI {{ c.cci | agruparDigitos }}</p>
+          </div>
+          <p class="cuentas__saldo">{{ +c.saldo | currency:c.moneda }}</p>
+          <a [routerLink]="['/cuentas', c.cuenta_id, 'movimientos']" class="bc-btn bc-btn--ghost">
+            Ver movimientos
+            <span class="bc-btn__icon" aria-hidden="true">→</span>
+          </a>
+        </article>
+      }
+    </div>
+  </section>
+
+  <div class="cuentas__totales bc-reveal">
+    @for (t of totales(); track t[0]) {
+      <div class="cuentas__total">
+        <span>Saldo total en {{ t[0] }}</span>
+        <b>{{ t[1] | currency:t[0] }}</b>
+      </div>
+    }
+  </div>
+}

@@ -1,0 +1,306 @@
+/* ─────────────────────────────────────────────────────────────
+   BancoCloud · sistema visual "Soft Structuralism"
+   Fondo plateado, tipografía grotesk amplia, componentes flotantes
+   con sombras ambientales difusas y motion con física de resorte.
+   Los layouts y features SOLO consumen estos tokens.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  /* marca */
+  --bc-primary: #00963f;
+  --bc-primary-deep: #006f2f;
+  --bc-primary-soft: #e6f6ec;
+  --bc-accent: #f2b53c;
+  --bc-danger: #d23c3c;
+
+  /* superficies */
+  --bc-bg: #f4f5f7;
+  --bc-bg-deep: #e9ebef;
+  --bc-surface: #ffffff;
+  --bc-surface-2: #fbfbfc;
+  --bc-ink: #0f1720;
+  --bc-ink-2: #46515c;
+  --bc-ink-3: #8a95a1;
+
+  /* hairlines y bezel: nunca gris 1px sólido */
+  --bc-hairline: rgb(15 23 32 / 0.06);
+  --bc-hairline-strong: rgb(15 23 32 / 0.1);
+  --bc-inset-hi: inset 0 1px 1px rgb(255 255 255 / 0.9);
+
+  /* sombras ambientales: muy difusas, nunca duras */
+  --bc-shadow-float: 0 1px 2px rgb(15 23 32 / 0.04), 0 24px 60px -24px rgb(15 23 32 / 0.18);
+  --bc-shadow-hover: 0 2px 4px rgb(15 23 32 / 0.05), 0 40px 80px -28px rgb(15 23 32 / 0.26);
+
+  /* geometría squircle */
+  --bc-r-xl: 2rem;
+  --bc-r-lg: 1.5rem;
+  --bc-r-md: 1rem;
+  --bc-bezel: 0.375rem;
+
+  /* motion: física de resorte, nunca linear/ease-in-out */
+  --bc-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --bc-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --bc-dur: 700ms;
+  --bc-dur-fast: 320ms;
+
+  --bc-font: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--bc-font);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--bc-ink);
+  background: var(--bc-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+}
+
+p {
+  margin: 0 0 1rem;
+  color: var(--bc-ink-2);
+}
+
+a {
+  color: var(--bc-primary-deep);
+  text-decoration: none;
+  transition: color var(--bc-dur-fast) var(--bc-ease);
+
+  &:hover {
+    color: var(--bc-primary);
+  }
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--bc-primary);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+/* ── Primitivas reutilizables ───────────────────────────────── */
+
+/* Double-bezel: shell exterior + core interior con radios concéntricos */
+.bc-shell {
+  padding: var(--bc-bezel);
+  border-radius: var(--bc-r-xl);
+  background: rgb(15 23 32 / 0.04);
+  box-shadow: 0 0 0 1px var(--bc-hairline);
+}
+
+.bc-core {
+  border-radius: calc(var(--bc-r-xl) - var(--bc-bezel));
+  background: var(--bc-surface);
+  box-shadow: var(--bc-inset-hi), var(--bc-shadow-float);
+}
+
+/* Eyebrow: etiqueta microscópica sobre un título */
+.bc-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: var(--bc-primary-soft);
+  color: var(--bc-primary-deep);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* Botón píldora con icono anidado ("button-in-button") */
+.bc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.5rem 0.75rem 1.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bc-ink);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--bc-inset-hi);
+  transition: transform var(--bc-dur-fast) var(--bc-ease), box-shadow var(--bc-dur) var(--bc-ease);
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.12);
+    transition: transform var(--bc-dur-fast) var(--bc-ease);
+  }
+
+  &:hover {
+    box-shadow: var(--bc-shadow-hover);
+
+    .bc-btn__icon {
+      transform: translate(3px, -1px) scale(1.05);
+    }
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &--primary {
+    background: var(--bc-primary);
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--bc-ink);
+    box-shadow: 0 0 0 1px var(--bc-hairline-strong);
+    padding-right: 1.5rem;
+  }
+}
+
+/* Entrada: fade-up pesado con blur, sin JS */
+@keyframes bc-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.bc-reveal {
+  animation: bc-reveal 900ms var(--bc-ease-out) both;
+
+  @for $i from 1 through 6 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{($i - 1) * 90}ms;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bc-reveal {
+    animation: none;
+  }
+  * {
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Chip de estado — activa/vigente/aplicada (ok), solicitado/por vencer (warn), rechazado/bloqueada (off) */
+.bc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: var(--bc-hairline-strong);
+  color: var(--bc-ink-2);
+
+  &--ok {
+    background: var(--bc-primary-soft);
+    color: var(--bc-primary-deep);
+  }
+
+  &--warn {
+    background: rgb(242 181 60 / 0.18);
+    color: #8a5a00;
+  }
+
+  &--off {
+    background: rgb(210 60 60 / 0.1);
+    color: var(--bc-danger);
+  }
+}
+
+/* Campo de formulario — doble bezel suave, sin bordes grises (usado por toda pantalla con inputs) */
+.campo {
+  display: block;
+
+  &__label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--bc-ink-2);
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border: 0;
+    border-radius: var(--bc-r-md);
+    background: var(--bc-bg);
+    box-shadow: 0 0 0 1px var(--bc-hairline), var(--bc-inset-hi);
+    font: inherit;
+    color: var(--bc-ink);
+    transition: box-shadow var(--bc-dur-fast) var(--bc-ease), background var(--bc-dur-fast) var(--bc-ease);
+
+    &:focus {
+      outline: none;
+      background: var(--bc-surface);
+      box-shadow: 0 0 0 2px var(--bc-primary), 0 12px 30px -16px rgb(0 150 63 / 0.5);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 6rem;
+  }
+
+  &__hint {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--bc-ink-3);
+
+    &--error {
+      color: var(--bc-danger);
+    }
+  }
+
+  &--error input,
+  &--error select,
+  &--error textarea {
+    box-shadow: 0 0 0 2px var(--bc-danger);
+  }
+}

@@ -1,0 +1,73 @@
+<header class="prest__head bc-reveal">
+  <span class="bc-eyebrow">Mi banco</span>
+  <h1>Préstamos</h1>
+</header>
+
+<section class="bc-shell bc-reveal">
+  <form [formGroup]="form" (ngSubmit)="enviar()" novalidate class="bc-core prest__form">
+    <h2>Solicitar un préstamo</h2>
+
+    <label class="campo" [class.campo--error]="invalido('monto_original')">
+      <span class="campo__label">Monto solicitado</span>
+      <input formControlName="monto_original" type="text" inputmode="decimal" placeholder="0.00" />
+      @if (invalido('monto_original')) {
+        <span class="campo__hint campo__hint--error">Ingresa un monto válido, con máximo 2 decimales.</span>
+      }
+    </label>
+
+    <label class="campo" [class.campo--error]="invalido('plazo')">
+      <span class="campo__label">Plazo (meses)</span>
+      <input formControlName="plazo" type="number" min="1" max="60" step="1" />
+    </label>
+
+    @if (errorServidor()) {
+      <p class="prest__error" role="alert">{{ errorServidor() }}</p>
+    }
+
+    @if (resultado(); as r) {
+      <p class="prest__resultado" [class.prest__resultado--ok]="r.estado === 'vigente'"
+         [class.prest__resultado--off]="r.estado === 'rechazado'">
+        {{ mensajeResultado[r.estado] }}
+      </p>
+    }
+
+    <div class="prest__acciones">
+      <button type="submit" class="bc-btn bc-btn--primary" [disabled]="enviando()">
+        {{ enviando() ? 'Evaluando…' : 'Solicitar' }}
+        <span class="bc-btn__icon" aria-hidden="true">→</span>
+      </button>
+    </div>
+  </form>
+</section>
+
+<h2 class="prest__subtitulo bc-reveal">Mis préstamos</h2>
+
+@if (cargando()) {
+  <p class="prest__estado bc-reveal">Cargando…</p>
+} @else if (prestamos().length === 0) {
+  <p class="prest__estado bc-reveal">Todavía no tienes préstamos.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core prest__lista">
+      @for (p of prestamos(); track p.prestamo_id) {
+        <article class="prest__fila">
+          <div>
+            <p class="prest__monto">{{ +p.monto_original | currency:'PEN' }} · {{ p.plazo }} meses · {{ p.tasa }}% TEA</p>
+            @if (p.estado === 'vigente') {
+              <p class="prest__meta">
+                Saldo {{ +p.saldo_capital | currency:'PEN' }}
+                @if (p.fecha_vencimiento) { · vence {{ p.fecha_vencimiento | date }} }
+                @if (p.dias_mora > 0) { · {{ p.dias_mora }} días de mora }
+              </p>
+            }
+          </div>
+          <span class="bc-tag" [class.bc-tag--ok]="p.estado === 'vigente'"
+                [class.bc-tag--warn]="p.estado === 'solicitado' || p.estado === 'aprobado'"
+                [class.bc-tag--off]="p.estado === 'rechazado' || p.estado === 'cancelado'">
+            {{ p.estado === 'solicitado' ? 'En revisión' : p.estado }}
+          </span>
+        </article>
+      }
+    </div>
+  </section>
+}

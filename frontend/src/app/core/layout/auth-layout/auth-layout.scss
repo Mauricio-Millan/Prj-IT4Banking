@@ -1,0 +1,69 @@
+.auth {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  gap: 1.5rem;
+  padding: 3rem 1rem;
+  overflow: hidden;
+  isolation: isolate;
+
+  /* orbe ambiental: única decoración, fija y sin eventos */
+  &__orb {
+    position: absolute;
+    inset: auto -20% -30% auto;
+    width: 60vmax;
+    height: 60vmax;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(0 150 63 / 0.14), transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  &__shell {
+    width: min(100%, 27rem);
+    transition: width var(--bc-dur) var(--bc-ease);
+
+    /* el onboarding (2 columnas) pide una tarjeta mas ancha */
+    &:has(bc-onboarding-page) {
+      width: min(100%, 46rem);
+    }
+  }
+
+  &__core {
+    padding: 2.5rem 2.25rem;
+  }
+
+  &__head {
+    margin-bottom: 2rem;
+  }
+
+  &__brand {
+    margin: 0.75rem 0 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--bc-ink);
+
+    span {
+      font-weight: 500;
+      color: var(--bc-ink-3);
+    }
+  }
+
+  &__foot {
+    margin: 0;
+    text-align: center;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    color: var(--bc-ink-3);
+  }
+
+  @media (max-width: 767px) {
+    padding: 2rem 1rem;
+
+    &__core {
+      padding: 2rem 1.5rem;
+    }
+  }
+}

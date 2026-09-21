@@ -1,0 +1,239 @@
+:host {
+  display: block;
+}
+
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Nav isla ──────────────────────────────────────────────── */
+.isla {
+  position: sticky;
+  top: 1.25rem;
+  z-index: 10;
+  width: min(calc(100% - 2rem), 60rem);
+  margin: 1.25rem auto 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: 0 0 0 1px var(--bc-hairline), var(--bc-inset-hi), var(--bc-shadow-float);
+  transition: box-shadow var(--bc-dur) var(--bc-ease);
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--bc-ink);
+    white-space: nowrap;
+  }
+
+  &__logo {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    background: var(--bc-primary);
+    box-shadow: 0 0 0 4px var(--bc-primary-soft);
+  }
+
+  &__nav {
+    display: flex;
+    gap: 0.125rem;
+    flex: 1;
+    justify-content: center;
+
+    a {
+      padding: 0.5rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--bc-ink-2);
+      transition: color var(--bc-dur-fast) var(--bc-ease), background var(--bc-dur-fast) var(--bc-ease), transform var(--bc-dur-fast) var(--bc-ease);
+
+      &:hover {
+        color: var(--bc-ink);
+        background: rgb(15 23 32 / 0.05);
+      }
+
+      &.activo {
+        color: var(--bc-primary-deep);
+        background: var(--bc-primary-soft);
+      }
+
+      &:active {
+        transform: scale(0.97);
+      }
+    }
+  }
+
+  &__acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  &__rol {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--bc-ink-3);
+  }
+
+  &__salir {
+    padding: 0.55rem 1rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--bc-ink);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--bc-inset-hi);
+    transition: transform var(--bc-dur-fast) var(--bc-ease), box-shadow var(--bc-dur) var(--bc-ease);
+
+    &:hover {
+      box-shadow: var(--bc-shadow-hover);
+    }
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  /* hamburguesa → X (solo transform) */
+  &__burger {
+    position: relative;
+    display: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(15 23 32 / 0.05);
+    cursor: pointer;
+
+    span {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 1.1rem;
+      height: 1.5px;
+      background: var(--bc-ink);
+      border-radius: 2px;
+      transform: translate(-50%, calc(-50% - 3px));
+      transition: transform var(--bc-dur-fast) var(--bc-ease);
+
+      &:last-child {
+        transform: translate(-50%, calc(-50% + 3px));
+      }
+    }
+  }
+}
+
+.shell--abierto .isla__burger span {
+  transform: translate(-50%, -50%) rotate(45deg);
+
+  &:last-child {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+}
+
+/* ── Overlay móvil ─────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  display: grid;
+  place-content: center;
+  background: rgb(244 245 247 / 0.86);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--bc-dur-fast) var(--bc-ease);
+
+  &__nav {
+    display: grid;
+    gap: 0.5rem;
+    text-align: center;
+
+    a,
+    button {
+      padding: 0.75rem 1.5rem;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--bc-ink);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(3rem);
+      transition: opacity var(--bc-dur) var(--bc-ease-out), transform var(--bc-dur) var(--bc-ease-out);
+      transition-delay: calc(var(--i, 0) * 60ms);
+
+      &.activo {
+        color: var(--bc-primary-deep);
+      }
+    }
+  }
+
+  &__salir {
+    margin-top: 1rem;
+    font-size: 1rem !important;
+    color: var(--bc-ink-3) !important;
+  }
+}
+
+.shell--abierto .overlay {
+  opacity: 1;
+  pointer-events: auto;
+
+  a,
+  button {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Contenido ─────────────────────────────────────────────── */
+.contenido {
+  flex: 1;
+  width: min(calc(100% - 2rem), 60rem);
+  margin: 0 auto;
+  padding: 3rem 0 5rem;
+}
+
+/* ── Móvil ─────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .isla {
+    top: 0.75rem;
+    margin-top: 0.75rem;
+    padding-left: 1rem;
+
+    &__nav,
+    &__rol,
+    &__salir {
+      display: none;
+    }
+
+    &__burger {
+      display: block;
+    }
+  }
+
+  .contenido {
+    width: 100%;
+    padding: 2rem 1rem 4rem;
+  }
+}

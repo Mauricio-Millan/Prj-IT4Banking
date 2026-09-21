@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+pyodbc
+alembic
+pydantic-settings
+PyJWT
+bcrypt
+cryptography
+python-dotenv
+pytest
+httpx

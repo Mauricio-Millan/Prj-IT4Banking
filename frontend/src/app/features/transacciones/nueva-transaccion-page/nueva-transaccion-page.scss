@@ -1,0 +1,44 @@
+.tx {
+  &__head {
+    margin-bottom: 1.5rem;
+
+    h1 {
+      margin: 0.75rem 0 0.35rem;
+    }
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__volver {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__error {
+    padding: 0.75rem 1rem;
+    border-radius: var(--bc-r-md);
+    background: rgb(210 60 60 / 0.08);
+    color: var(--bc-danger);
+    font-size: 0.9rem;
+  }
+
+  &__acciones {
+    margin-top: 0.5rem;
+
+    .bc-btn[disabled] {
+      opacity: 0.6;
+      cursor: progress;
+    }
+  }
+}
+
+.tx__form {
+  display: grid;
+  gap: 1.1rem;
+  max-width: 26rem;
+  padding: 1.75rem;
+}

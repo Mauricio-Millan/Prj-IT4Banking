@@ -1,0 +1,152 @@
+@if (tarjetaEmitida(); as tarjeta) {
+  <div class="reg-ok bc-reveal">
+    <span class="bc-eyebrow">Cuenta creada</span>
+    <h2>¡Listo! Ya eres cliente BancoCloud</h2>
+    <p>Junto con tu cuenta de ahorro emitimos tu tarjeta de débito virtual, lista para usar de inmediato.</p>
+
+    <div class="reg-ok__tarjeta bc-shell">
+      <div class="bc-core reg-ok__cara">
+        <div class="reg-ok__marca">
+          <span>Débito</span>
+          <span>BancoCloud</span>
+        </div>
+        <p class="reg-ok__pan">•••• •••• •••• {{ tarjeta.ultimos_4 }}</p>
+        <p class="reg-ok__vence">Vence {{ tarjeta.fecha_vencimiento | date:'MM/yyyy' }}</p>
+      </div>
+    </div>
+
+    <button type="button" class="bc-btn bc-btn--primary" (click)="continuar()">
+      Continuar a mi banca
+      <span class="bc-btn__icon" aria-hidden="true">→</span>
+    </button>
+  </div>
+} @else {
+
+<div class="reg" [class.reg--linaje]="linaje()">
+  <header class="reg__head">
+    <div>
+      <h2>Crea tu cuenta</h2>
+      <p>En dos minutos tendrás tu cuenta de ahorro en soles lista para usar.</p>
+    </div>
+    <button type="button" class="reg__toggle" [attr.aria-pressed]="linaje()" (click)="linaje.set(!linaje())">
+      {{ linaje() ? 'Ocultar' : 'Ver' }} campos de la BD
+    </button>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+    <!-- Identificación -->
+    <fieldset class="reg__seccion">
+      <legend><span class="reg__num">1</span> Identificación</legend>
+      <div class="reg__grid">
+        <label class="campo">
+          <span class="campo__label">Tipo de documento <code class="col">cliente.tipo_documento</code></span>
+          <select formControlName="tipo_documento">
+            <option value="DNI">DNI</option>
+            <option value="CE">Carné de extranjería</option>
+            <option value="PASAPORTE">Pasaporte</option>
+          </select>
+        </label>
+
+        <label class="campo" [class.campo--error]="(form.errors?.['documento'] && form.get('numero_documento')?.touched) || invalido('numero_documento')">
+          <span class="campo__label">Número de documento <code class="col">cliente.numero_documento</code></span>
+          <input formControlName="numero_documento" inputmode="numeric" autocomplete="off" placeholder="45872103" />
+          @if (form.get('numero_documento')?.hasError('duplicado')) {
+            <span class="campo__hint campo__hint--error">Ya existe un cliente con este documento.</span>
+          } @else if (form.errors?.['documento'] && form.get('numero_documento')?.touched) {
+            <span class="campo__hint campo__hint--error">Formato inválido para el tipo elegido (DNI: 8 dígitos).</span>
+          } @else {
+            <span class="campo__hint">Tu código de cliente lo genera el banco al confirmar.</span>
+          }
+        </label>
+
+        <label class="campo" [class.campo--error]="invalido('nombres')">
+          <span class="campo__label">Nombres <code class="col">cliente.nombres</code></span>
+          <input formControlName="nombres" autocomplete="given-name" />
+        </label>
+
+        <label class="campo" [class.campo--error]="invalido('apellidos')">
+          <span class="campo__label">Apellidos <code class="col">cliente.apellidos</code></span>
+          <input formControlName="apellidos" autocomplete="family-name" />
+        </label>
+
+        <label class="campo" [class.campo--error]="invalido('fecha_nacimiento')">
+          <span class="campo__label">Fecha de nacimiento <code class="col">cliente.fecha_nacimiento</code></span>
+          <input formControlName="fecha_nacimiento" type="date" autocomplete="bday" />
+          @if (form.get('fecha_nacimiento')?.hasError('menor')) {
+            <span class="campo__hint campo__hint--error">Debes ser mayor de 18 años.</span>
+          } @else {
+            <span class="campo__hint">Define tu segmento inicial <code class="col">cliente.segmento</code></span>
+          }
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Contacto -->
+    <fieldset class="reg__seccion">
+      <legend><span class="reg__num">2</span> Contacto</legend>
+      <div class="reg__grid">
+        <label class="campo" [class.campo--error]="invalido('email')">
+          <span class="campo__label">Correo electrónico <code class="col">cliente.email · usuario.email</code></span>
+          <input formControlName="email" type="email" autocomplete="email" />
+          @if (form.get('email')?.hasError('duplicado')) {
+            <span class="campo__hint campo__hint--error">Este correo ya está registrado. <a routerLink="/login">Inicia sesión</a></span>
+          }
+        </label>
+
+        <label class="campo" [class.campo--error]="invalido('telefono')">
+          <span class="campo__label">Teléfono móvil <code class="col">cliente.telefono</code></span>
+          <input formControlName="telefono" type="tel" autocomplete="tel" placeholder="+51 987 654 321" />
+        </label>
+
+        <label class="campo">
+          <span class="campo__label">Región <code class="col">cliente.region</code></span>
+          <select formControlName="region">
+            @for (r of regiones; track r) {
+              <option [value]="r">{{ r }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Acceso -->
+    <fieldset class="reg__seccion">
+      <legend><span class="reg__num">3</span> Acceso</legend>
+      <div class="reg__grid">
+        <label class="campo" [class.campo--error]="invalido('password')">
+          <span class="campo__label">Contraseña <code class="col">usuario.password_hash</code></span>
+          <input formControlName="password" type="password" autocomplete="new-password" />
+          <span class="campo__hint">Mínimo 8 caracteres. Se guarda cifrada con bcrypt, nunca en claro.</span>
+        </label>
+
+        <label class="campo" [class.campo--error]="form.errors?.['noCoincide'] && form.get('confirmar')?.touched">
+          <span class="campo__label">Confirmar contraseña</span>
+          <input formControlName="confirmar" type="password" autocomplete="new-password" />
+          @if (form.errors?.['noCoincide'] && form.get('confirmar')?.touched) {
+            <span class="campo__hint campo__hint--error">Las contraseñas no coinciden.</span>
+          }
+        </label>
+      </div>
+    </fieldset>
+
+    @if (errorServidor()) {
+      <p class="reg__error" role="alert">{{ errorServidor() }}</p>
+    }
+
+    <div class="reg__acciones">
+      <button type="submit" class="bc-btn bc-btn--primary" [disabled]="enviando()">
+        {{ enviando() ? 'Creando tu cuenta…' : 'Registrarme' }}
+        <span class="bc-btn__icon" aria-hidden="true">→</span>
+      </button>
+      <a routerLink="/login">Ya tengo cuenta</a>
+    </div>
+  </form>
+
+  @if (linaje()) {
+    <p class="reg__nota">
+      Cada campo escribe una columna de <b>cliente</b>; la contraseña va a <b>usuario</b> y el banco abre una
+      <b>cuenta</b> de ahorro. Aquí nacen los registros que el pipeline nocturno extrae al Lakehouse.
+    </p>
+  }
+</div>
+}

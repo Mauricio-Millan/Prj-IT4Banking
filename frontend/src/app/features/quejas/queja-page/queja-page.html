@@ -1,0 +1,52 @@
+<header class="queja__head bc-reveal">
+  <span class="bc-eyebrow">Mi banco</span>
+  <h1>Registrar una queja</h1>
+</header>
+
+<section class="bc-shell bc-reveal">
+  <form [formGroup]="form" (ngSubmit)="enviar()" novalidate class="bc-core queja__form">
+    <label class="campo" [class.campo--error]="invalido('texto')">
+      <span class="campo__label">Cuéntanos qué pasó</span>
+      <textarea formControlName="texto" rows="5" placeholder="Describe tu queja con el mayor detalle posible…"></textarea>
+      @if (invalido('texto')) {
+        <span class="campo__hint campo__hint--error">Escribe al menos 10 caracteres.</span>
+      }
+    </label>
+
+    @if (errorServidor()) {
+      <p class="queja__error" role="alert">{{ errorServidor() }}</p>
+    }
+    @if (enviada()) {
+      <p class="queja__ok">Tu queja fue registrada. Un analista la revisará pronto.</p>
+    }
+
+    <div class="queja__acciones">
+      <button type="submit" class="bc-btn bc-btn--primary" [disabled]="enviando()">
+        {{ enviando() ? 'Enviando…' : 'Enviar queja' }}
+        <span class="bc-btn__icon" aria-hidden="true">→</span>
+      </button>
+    </div>
+  </form>
+</section>
+
+<h2 class="queja__subtitulo bc-reveal">Mis quejas</h2>
+
+@if (cargando()) {
+  <p class="queja__estado bc-reveal">Cargando…</p>
+} @else if (quejas().length === 0) {
+  <p class="queja__estado bc-reveal">Todavía no has registrado ninguna queja.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core queja__lista">
+      @for (q of quejas(); track q.queja_id) {
+        <article class="queja__fila">
+          <p class="queja__texto">{{ q.texto }}</p>
+          <span class="bc-tag" [class.bc-tag--warn]="q.estado_revision === 'pendiente'"
+                [class.bc-tag--ok]="q.estado_revision !== 'pendiente'">
+            {{ q.estado_revision === 'pendiente' ? 'En revisión' : q.estado_revision }}
+          </span>
+        </article>
+      }
+    </div>
+  </section>
+}

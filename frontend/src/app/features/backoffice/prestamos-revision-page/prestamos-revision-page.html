@@ -1,0 +1,35 @@
+<header class="rev__head bc-reveal">
+  <span class="bc-eyebrow">Backoffice</span>
+  <h1>Préstamos por aprobar</h1>
+  <p>Solicitudes que superan el límite de autoevaluación y necesitan una decisión humana.</p>
+</header>
+
+@if (cargando()) {
+  <p class="rev__estado bc-reveal">Cargando solicitudes…</p>
+} @else if (pendientes().length === 0) {
+  <p class="rev__estado bc-reveal">No hay solicitudes pendientes de revisión.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core rev__lista">
+      @for (p of pendientes(); track p.prestamo_id) {
+        <article class="rev__fila">
+          <div>
+            <p class="rev__cliente">{{ p.cliente_nombre }} · {{ p.cliente_documento }}</p>
+            <p class="rev__detalle">S/ {{ p.monto_original }} · {{ p.plazo }} meses · {{ p.tasa }}% TEA propuesta</p>
+          </div>
+          <div class="rev__acciones">
+            <button type="button" class="bc-btn bc-btn--ghost" [disabled]="procesando() === p.prestamo_id"
+                    (click)="resolver(p.prestamo_id, 'rechazar')">
+              Rechazar
+            </button>
+            <button type="button" class="bc-btn bc-btn--primary" [disabled]="procesando() === p.prestamo_id"
+                    (click)="resolver(p.prestamo_id, 'aprobar')">
+              Aprobar
+              <span class="bc-btn__icon" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+}

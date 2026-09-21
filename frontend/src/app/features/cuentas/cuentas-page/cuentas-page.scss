@@ -1,0 +1,85 @@
+.cuentas {
+  &__head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  &__estado {
+    padding: 2rem 0;
+    color: var(--bc-ink-3);
+
+    &--error {
+      color: var(--bc-danger);
+    }
+  }
+
+  &__lista {
+    padding: 0.5rem;
+  }
+
+  &__fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--bc-r-md);
+
+    & + & {
+      border-top: 1px solid var(--bc-hairline);
+    }
+  }
+
+  &__tipo {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__meta {
+    margin: 0.15rem 0 0;
+    font-size: 0.8rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__saldo {
+    margin: 0 auto 0 1.5rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  &__totales {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+    padding: 0 0.5rem;
+  }
+
+  &__total {
+    span {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--bc-ink-3);
+    }
+
+    b {
+      font-size: 1.15rem;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .cuentas__fila {
+    flex-wrap: wrap;
+  }
+
+  .cuentas__saldo {
+    margin-left: 0;
+  }
+}

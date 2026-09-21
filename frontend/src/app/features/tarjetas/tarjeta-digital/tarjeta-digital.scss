@@ -1,0 +1,60 @@
+.tdig {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  text-align: center;
+
+  &__card {
+    width: min(22rem, 100%);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, var(--bc-primary-deep), var(--bc-primary));
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    box-shadow: 0 1rem 2rem rgb(0 0 0 / 0.2);
+  }
+
+  &__top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    opacity: 0.9;
+  }
+
+  &__pan {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+
+  &__bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  &__label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 0.15rem;
+  }
+
+  &__acciones {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  &__cuenta-regresiva {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--bc-ink-3);
+  }
+}

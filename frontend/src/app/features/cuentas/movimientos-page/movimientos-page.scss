@@ -1,0 +1,85 @@
+.mov {
+  &__head {
+    margin-bottom: 1.5rem;
+  }
+
+  &__volver {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__saldo {
+    margin: 0;
+    color: var(--bc-ink-2);
+  }
+
+  &__filtro {
+    display: flex;
+    align-items: end;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+
+    .campo {
+      min-width: 10rem;
+    }
+  }
+
+  &__estado {
+    padding: 2rem 0;
+    color: var(--bc-ink-3);
+
+    &--error {
+      color: var(--bc-danger);
+    }
+  }
+
+  &__tabla {
+    padding: 0.5rem;
+  }
+
+  &__fila {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+
+    & + & {
+      border-top: 1px solid var(--bc-hairline);
+    }
+  }
+
+  &__tipo {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__meta {
+    margin: 0.15rem 0 0;
+    font-size: 0.8rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__monto {
+    margin: 0 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--bc-danger);
+
+    &--entrada {
+      color: var(--bc-primary-deep);
+    }
+  }
+
+  &__paginacion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--bc-ink-3);
+  }
+}

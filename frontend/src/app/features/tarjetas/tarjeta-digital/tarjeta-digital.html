@@ -1,0 +1,35 @@
+<div class="tdig bc-reveal">
+  <div class="tdig__card">
+    <div class="tdig__top">
+      <span>BancoCloud</span>
+      <span>Débito virtual</span>
+    </div>
+    <p class="tdig__pan">{{ datos().pan | agruparDigitos }}</p>
+    <div class="tdig__bottom">
+      <div>
+        <span class="tdig__label">Titular</span>
+        <span>{{ datos().titular }}</span>
+      </div>
+      <div>
+        <span class="tdig__label">Vence</span>
+        <span>{{ datos().vencimiento }}</span>
+      </div>
+      <div>
+        <span class="tdig__label">CVV dinámico</span>
+        <span>{{ datos().cvv }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tdig__acciones">
+    <button type="button" class="bc-btn bc-btn--ghost" (click)="copiar(datos().pan, 'pan')">
+      {{ copiado() === 'pan' ? 'Copiado ✓' : 'Copiar número' }}
+    </button>
+    <button type="button" class="bc-btn bc-btn--ghost" (click)="copiar(datos().cvv, 'cvv')">
+      {{ copiado() === 'cvv' ? 'Copiado ✓' : 'Copiar CVV' }}
+    </button>
+  </div>
+
+  <p class="tdig__cuenta-regresiva">Estos datos se ocultan solos en {{ segundosRestantes() }} s</p>
+  <button type="button" class="bc-btn bc-btn--primary" (click)="cerrar.emit()">Cerrar ahora</button>
+</div>

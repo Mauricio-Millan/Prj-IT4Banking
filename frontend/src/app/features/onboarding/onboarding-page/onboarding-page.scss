@@ -1,0 +1,183 @@
+.reg-ok {
+  text-align: center;
+
+  h2 {
+    margin: 0.75rem 0 0.5rem;
+  }
+
+  p {
+    margin: 0 auto 1.5rem;
+    max-width: 26rem;
+  }
+
+  &__tarjeta {
+    width: min(100%, 20rem);
+    margin: 0 auto 1.75rem;
+  }
+
+  &__cara {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--bc-primary-deep), var(--bc-primary));
+    color: #fff;
+    text-align: left;
+  }
+
+  &__marca {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    opacity: 0.9;
+    margin-bottom: 1.5rem;
+  }
+
+  &__pan {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #fff;
+  }
+
+  &__vence {
+    margin: 0.5rem 0 0;
+    font-size: 0.8rem;
+    opacity: 0.85;
+  }
+}
+
+.reg {
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__toggle {
+    flex-shrink: 0;
+    padding: 0.4rem 0.85rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    box-shadow: 0 0 0 1px var(--bc-hairline-strong);
+    color: var(--bc-ink-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--bc-dur-fast) var(--bc-ease), color var(--bc-dur-fast) var(--bc-ease);
+
+    &[aria-pressed='true'] {
+      background: var(--bc-primary-soft);
+      color: var(--bc-primary-deep);
+    }
+  }
+
+  &__seccion {
+    margin: 0 0 1.25rem;
+    padding: 0;
+    border: 0;
+
+    legend {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--bc-ink-3);
+    }
+  }
+
+  &__num {
+    display: grid;
+    place-items: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: var(--bc-ink);
+    color: #fff;
+    font-size: 0.7rem;
+    letter-spacing: 0;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.25rem;
+  }
+
+  &__error {
+    padding: 0.75rem 1rem;
+    border-radius: var(--bc-r-md);
+    background: rgb(210 60 60 / 0.08);
+    color: var(--bc-danger);
+    font-size: 0.9rem;
+  }
+
+  &__acciones {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 0.5rem;
+
+    button[disabled] {
+      opacity: 0.6;
+      cursor: progress;
+    }
+  }
+
+  &__nota {
+    margin: 1.5rem 0 0;
+    padding: 0.9rem 1.1rem;
+    border-radius: var(--bc-r-md);
+    background: var(--bc-primary-soft);
+    color: var(--bc-primary-deep);
+    font-size: 0.85rem;
+  }
+
+  /* linaje: los códigos de columna solo existen con el toggle activo */
+  .col {
+    display: none;
+    margin-left: 0.35rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: var(--bc-primary-soft);
+    color: var(--bc-primary-deep);
+    font: 600 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    vertical-align: middle;
+  }
+
+  &--linaje .col {
+    display: inline-block;
+  }
+}
+
+/* .campo (input/label/hint) ahora vive en src/styles.scss para reusarse en login/transacciones/prestamos/quejas */
+
+@media (max-width: 767px) {
+  .reg__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reg__head {
+    flex-direction: column;
+  }
+
+  .reg__acciones {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+
+    .bc-btn {
+      justify-content: space-between;
+    }
+  }
+}

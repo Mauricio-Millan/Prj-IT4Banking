@@ -1,0 +1,30 @@
+<header class="login__head bc-reveal">
+  <span class="bc-eyebrow">Bienvenido de nuevo</span>
+  <h2>Inicia sesión</h2>
+  <p>Ingresa con tu correo y contraseña.</p>
+</header>
+
+<form [formGroup]="form" (ngSubmit)="enviar()" novalidate class="bc-reveal">
+  <label class="campo" [class.campo--error]="invalido('email')">
+    <span class="campo__label">Correo electrónico</span>
+    <input formControlName="email" type="email" autocomplete="email" />
+  </label>
+
+  <label class="campo" [class.campo--error]="invalido('password')">
+    <span class="campo__label">Contraseña</span>
+    <input formControlName="password" type="password" autocomplete="current-password" />
+  </label>
+
+  @if (errorServidor()) {
+    <p class="login__error" role="alert">{{ errorServidor() }}</p>
+  }
+
+  <div class="login__acciones">
+    <button type="submit" class="bc-btn bc-btn--primary" [disabled]="enviando()">
+      {{ enviando() ? 'Ingresando…' : 'Ingresar' }}
+      <span class="bc-btn__icon" aria-hidden="true">→</span>
+    </button>
+  </div>
+</form>
+
+<p class="login__pie bc-reveal">¿Aún no tienes cuenta? <a routerLink="/registro">Regístrate</a></p>

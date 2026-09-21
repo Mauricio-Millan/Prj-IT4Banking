@@ -1,0 +1,50 @@
+<div class="shell" [class.shell--abierto]="abierto()">
+  <!-- Nav isla: píldora de vidrio flotante, despegada del borde superior -->
+  <header class="isla">
+    <a class="isla__brand" [routerLink]="inicio()" (click)="cerrar()">
+      <span class="isla__logo" aria-hidden="true"></span>
+      {{ titulo() }}
+    </a>
+
+    <nav class="isla__nav" aria-label="Principal">
+      @for (item of menu(); track item.ruta) {
+        <a [routerLink]="item.ruta" routerLinkActive="activo" ariaCurrentWhenActive="page">{{ item.etiqueta }}</a>
+      }
+      @if (auth.rol() !== 'cliente' && inicio() === '/cuentas') {
+        <a routerLink="/backoffice" routerLinkActive="activo">Backoffice</a>
+      }
+    </nav>
+
+    <div class="isla__acciones">
+      <span class="isla__rol">{{ auth.rol() }}</span>
+      <button type="button" class="isla__salir" (click)="salir()">Salir</button>
+      <button
+        type="button"
+        class="isla__burger"
+        [attr.aria-expanded]="abierto()"
+        aria-controls="menu-movil"
+        aria-label="Menú"
+        (click)="alternar()"
+      >
+        <span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Overlay móvil: vidrio pesado + reveal escalonado -->
+  <div id="menu-movil" class="overlay" [attr.aria-hidden]="!abierto()">
+    <nav class="overlay__nav" aria-label="Principal móvil">
+      @for (item of menu(); track item.ruta; let i = $index) {
+        <a [routerLink]="item.ruta" routerLinkActive="activo" [style.--i]="i" (click)="cerrar()">{{ item.etiqueta }}</a>
+      }
+      @if (auth.rol() !== 'cliente' && inicio() === '/cuentas') {
+        <a routerLink="/backoffice" [style.--i]="menu().length" (click)="cerrar()">Backoffice</a>
+      }
+      <button type="button" class="overlay__salir" [style.--i]="menu().length + 1" (click)="salir()">Cerrar sesión</button>
+    </nav>
+  </div>
+
+  <main class="contenido">
+    <router-outlet />
+  </main>
+</div>

@@ -1,0 +1,100 @@
+<div class="land">
+  <header class="land__header">
+    <span class="land__brand">
+      <span class="land__logo" aria-hidden="true"></span>
+      BancoCloud
+    </span>
+    <nav class="land__nav" aria-label="Acceso">
+      <a routerLink="/login">Iniciar sesión</a>
+      <a routerLink="/registro" class="bc-btn bc-btn--primary land__nav-cta">
+        Crear cuenta
+        <span class="bc-btn__icon" aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </header>
+
+  <!-- S1: Hero -->
+  <section class="land__hero">
+    <span class="bc-eyebrow bc-reveal">Banca 100% digital</span>
+    <h1 class="bc-reveal">Tu banco, sin oficinas ni filas</h1>
+    <p class="land__hero-sub bc-reveal">
+      Abre una cuenta de ahorro en minutos, recibe tu tarjeta de débito virtual al instante
+      y transfiere dinero cuando lo necesites, todo desde tu celular o tu computadora.
+    </p>
+    <div class="land__hero-cta bc-reveal">
+      <a routerLink="/registro" class="bc-btn bc-btn--primary">
+        Crear cuenta
+        <span class="bc-btn__icon" aria-hidden="true">→</span>
+      </a>
+      <a routerLink="/login" class="bc-btn bc-btn--ghost">Iniciar sesión</a>
+    </div>
+  </section>
+
+  <!-- S2: Qué somos -->
+  <section class="land__seccion land__seccion--centrada">
+    <span class="bc-eyebrow bc-reveal">Qué somos</span>
+    <h2 class="bc-reveal">Un banco pensado para operar solo en la nube</h2>
+    <p class="bc-reveal">
+      BancoCloud Digital Andino es un banco 100% digital que opera en Perú: no tenemos oficinas físicas,
+      así que toda tu banca —desde abrir tu cuenta hasta pedir un préstamo— sucede en línea, de principio a fin.
+    </p>
+  </section>
+
+  <!-- S3: Por qué nosotros -->
+  <section class="land__seccion">
+    <span class="bc-eyebrow bc-reveal">Por qué nosotros</span>
+    <h2 class="bc-reveal">Menos trámites, más banco</h2>
+    <div class="land__grid">
+      @for (d of diferenciadores; track d.titulo) {
+        <article class="land__card bc-shell bc-reveal">
+          <div class="bc-core land__card-inner">
+            <h3>{{ d.titulo }}</h3>
+            <p>{{ d.detalle }}</p>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- S4: Herramientas y características -->
+  <section class="land__seccion land__seccion--oscura">
+    <span class="bc-eyebrow bc-reveal">Lo que ya puedes hacer</span>
+    <h2 class="bc-reveal">Herramientas y características</h2>
+    <div class="land__grid land__grid--herramientas">
+      @for (h of herramientas; track h.nombre) {
+        <article class="land__herramienta bc-reveal">
+          <h3>{{ h.nombre }}</h3>
+          <p>{{ h.detalle }}</p>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- S5: CTA de cierre -->
+  <section class="land__cierre">
+    <h2 class="bc-reveal">¿Listo para abrir tu cuenta?</h2>
+    <p class="bc-reveal">Regístrate en minutos y empieza a usar tu banca digital hoy mismo.</p>
+    <a routerLink="/registro" class="bc-btn bc-btn--primary bc-reveal">
+      Crear cuenta
+      <span class="bc-btn__icon" aria-hidden="true">→</span>
+    </a>
+  </section>
+
+  <!-- S6: Pie de página -->
+  <footer class="land__footer">
+    <div>
+      <span class="land__brand land__brand--footer">
+        <span class="land__logo" aria-hidden="true"></span>
+        BancoCloud
+      </span>
+      <p class="land__aviso">
+        Proyecto académico desarrollado para el curso IT for Banking (UTP / Interbank). No es una entidad
+        financiera real, no capta depósitos ni está supervisado por la SBS ni por ningún regulador.
+      </p>
+    </div>
+    <nav class="land__footer-links" aria-label="Accesos rápidos">
+      <a routerLink="/login">Iniciar sesión</a>
+      <a routerLink="/registro">Crear cuenta</a>
+    </nav>
+  </footer>
+</div>

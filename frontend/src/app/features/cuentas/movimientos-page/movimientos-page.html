@@ -1,0 +1,61 @@
+<header class="mov__head bc-reveal">
+  <div>
+    <a routerLink="/cuentas" class="mov__volver">← Mis cuentas</a>
+    <h1>Movimientos</h1>
+    @if (saldo(); as s) {
+      <p class="mov__saldo">Cuenta N.° {{ s.numero_cuenta | agruparDigitos }} · saldo actual {{ +s.saldo | currency:s.moneda }}</p>
+    }
+  </div>
+</header>
+
+<form [formGroup]="filtro" (ngSubmit)="buscar()" class="mov__filtro bc-reveal">
+  <label class="campo">
+    <span class="campo__label">Desde</span>
+    <input formControlName="desde" type="date" />
+  </label>
+  <label class="campo">
+    <span class="campo__label">Hasta</span>
+    <input formControlName="hasta" type="date" />
+  </label>
+  <button type="submit" class="bc-btn bc-btn--ghost">Filtrar</button>
+</form>
+
+@if (cargando()) {
+  <p class="mov__estado bc-reveal">Cargando movimientos…</p>
+} @else if (error()) {
+  <p class="mov__estado mov__estado--error bc-reveal">No pudimos cargar los movimientos.</p>
+} @else if (!datos() || datos()!.items.length === 0) {
+  <p class="mov__estado bc-reveal">No hay movimientos en este rango de fechas.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core mov__tabla">
+      @for (m of datos()!.items; track m.transaccion_id) {
+        <article class="mov__fila">
+          <div>
+            <p class="mov__tipo">{{ etiquetaTipo[m.tipo] }}</p>
+            <p class="mov__meta">{{ m.fecha_hora | date:'d MMM y, HH:mm' }} · {{ m.canal }}</p>
+            @if (m.tipo === 'transferencia') {
+              <p class="mov__meta">
+                {{ m.direccion === 'entrada' ? 'De' : 'A' }} N.°
+                {{ (m.direccion === 'entrada' ? m.cuenta_origen_numero : m.cuenta_destino_numero) | agruparDigitos }}
+              </p>
+            }
+          </div>
+          <span class="bc-tag" [class.bc-tag--ok]="m.estado === 'aplicada'"
+                [class.bc-tag--warn]="m.estado === 'reversada'" [class.bc-tag--off]="m.estado === 'rechazada'">
+            {{ m.estado }}
+          </span>
+          <p class="mov__monto" [class.mov__monto--entrada]="m.direccion === 'entrada'">
+            {{ m.direccion === 'entrada' ? '+' : '−' }} {{ +m.monto | currency:(saldo()?.moneda ?? 'PEN') }}
+          </p>
+        </article>
+      }
+    </div>
+  </section>
+
+  <nav class="mov__paginacion bc-reveal" aria-label="Paginación de movimientos">
+    <button type="button" class="bc-btn bc-btn--ghost" [disabled]="pagina() <= 1" (click)="irAPagina(pagina() - 1)">Anterior</button>
+    <span>Página {{ datos()!.pagina }}</span>
+    <button type="button" class="bc-btn bc-btn--ghost" [disabled]="pagina() * datos()!.tamano >= datos()!.total" (click)="irAPagina(pagina() + 1)">Siguiente</button>
+  </nav>
+}

@@ -1,0 +1,73 @@
+<header class="tarjetas__head bc-reveal">
+  <span class="bc-eyebrow">Mi banco</span>
+  <h1>Mis tarjetas</h1>
+</header>
+
+@if (cargando()) {
+  <p class="tarjetas__estado bc-reveal">Cargando tus tarjetas…</p>
+} @else if (error()) {
+  <p class="tarjetas__estado tarjetas__estado--error bc-reveal">No pudimos cargar tus tarjetas.</p>
+} @else if (tarjetas().length === 0) {
+  <p class="tarjetas__estado bc-reveal">Todavía no tienes tarjetas.</p>
+} @else {
+  <div class="tarjetas__grid">
+    @for (t of tarjetas(); track t.tarjeta_id) {
+      <article class="tarjetas__tile bc-shell bc-reveal">
+        <div class="bc-core tarjetas__cara" [class.tarjetas__cara--credito]="t.tipo_tarjeta === 'credito'"
+             [class.tarjetas__cara--bloqueada]="t.estado === 'bloqueada'">
+          <div class="tarjetas__marca">
+            <span>{{ t.tipo_tarjeta === 'credito' ? 'Crédito' : 'Débito' }}</span>
+            <span>BancoCloud</span>
+          </div>
+          <p class="tarjetas__pan">•••• •••• •••• {{ t.ultimos_4 }}</p>
+        </div>
+        <dl class="tarjetas__meta">
+          <div><dt>Emisión</dt><dd>{{ t.fecha_emision | date:'MM/yyyy' }}</dd></div>
+          <div><dt>Vencimiento</dt><dd>{{ t.fecha_vencimiento | date:'MM/yyyy' }}</dd></div>
+          <div>
+            <dt>Estado</dt>
+            <dd>
+              <span class="bc-tag" [class.bc-tag--ok]="t.estado === 'activa'"
+                    [class.bc-tag--warn]="t.estado === 'bloqueada'" [class.bc-tag--off]="t.estado === 'vencida'">
+                {{ t.estado }}
+              </span>
+            </dd>
+          </div>
+        </dl>
+        @if (t.estado === 'activa') {
+          <button type="button" class="bc-btn bc-btn--ghost tarjetas__ver" (click)="abrirModal(t.tarjeta_id)">
+            Ver datos
+          </button>
+        }
+      </article>
+    }
+  </div>
+}
+
+@if (modalTarjetaId(); as tarjetaId) {
+  <div class="tarjetas__modal" role="dialog" aria-modal="true">
+    <form class="bc-shell bc-core tarjetas__modal-caja" [formGroup]="passwordForm" (ngSubmit)="confirmarPassword()">
+      <h2>Confirma tu contraseña</h2>
+      <p>Por seguridad, vuelve a ingresar tu contraseña para ver los datos completos de la tarjeta.</p>
+      <label class="campo">
+        <span class="campo__label">Contraseña</span>
+        <input formControlName="password" type="password" autocomplete="current-password" />
+      </label>
+      @if (errorRevelado()) {
+        <p class="tarjetas__modal-error" role="alert">{{ errorRevelado() }}</p>
+      }
+      <div class="tarjetas__modal-acciones">
+        <button type="button" class="bc-btn bc-btn--ghost" (click)="cerrarModal()">Cancelar</button>
+        <button type="submit" class="bc-btn bc-btn--primary" [disabled]="revelando() || bloqueado()">
+          {{ revelando() ? 'Verificando…' : 'Confirmar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+@if (revelado(); as r) {
+  <div class="tarjetas__modal" role="dialog" aria-modal="true">
+    <bc-tarjeta-digital [datos]="r.datos" (cerrar)="cerrarTarjetaDigital()" />
+  </div>
+}

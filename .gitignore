@@ -1,0 +1,32 @@
+# secretos
+.env
+*.env
+!.env.example
+#Docs
+Docs/
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+
+# node / angular
+node_modules/
+dist/
+.angular/
+
+# ide / os
+.vscode/
+.idea/
+Thumbs.db
+
+# capturas de playwright
+.playwright-mcp/
+
+#Agents
+.agents/
+.claude/
+
+#Prototipos
+/Prototipo-Diego

@@ -1,0 +1,41 @@
+.login__head {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0.75rem 0 0.35rem;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+.login__error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--bc-r-md);
+  background: rgb(210 60 60 / 0.08);
+  color: var(--bc-danger);
+  font-size: 0.9rem;
+}
+
+.login__acciones {
+  margin-top: 0.25rem;
+
+  .bc-btn[disabled] {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.login__pie {
+  margin: 1.5rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--bc-ink-3);
+}
