@@ -30,5 +30,16 @@ class Settings(BaseSettings):
     tarjeta_clave_cifrado: str
     tarjeta_clave_hmac: str
 
+    # HU-Clasificacion-Quejas-GenAI. "falso" (determinista, sin red) es el default y lo unico
+    # que corre en CI; llm_api_key no tiene default de VALOR (nunca un placeholder hardcodeado)
+    # pero solo es obligatoria en la practica para el proveedor "groq" — _completar_groq falla
+    # rapido y explicito si falta, en vez de forzar una clave para todo el resto de la app que
+    # nunca llama a un LLM real (a diferencia de las claves de tarjeta, que si son siempre
+    # necesarias porque el cifrado no es opcional).
+    llm_provider: str = "falso"
+    llm_modelo: str = "llama-3.1-8b-instant"
+    llm_api_key: str | None = None
+    quejas_cuota_diaria: int = 5
+
 
 settings = Settings()

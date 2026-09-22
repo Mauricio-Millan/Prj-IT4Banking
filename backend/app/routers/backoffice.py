@@ -7,10 +7,12 @@ from app.core.security import UsuarioActual, require_role
 from app.schemas.backoffice_clientes import ClienteConCuentasOut, ClientesPagina
 from app.schemas.clientes_empresa import ClienteEmpresaIn, ClienteEmpresaOut, EmpresaListadaOut
 from app.schemas.prestamos import DecisionPrestamoIn, PrestamoOut, PrestamoRevisionOut
+from app.schemas.quejas import DecisionQuejaIn, MetricasQuejasOut, QuejaOut, QuejaRevisionOut
 from app.schemas.usuarios_internos import ActualizarUsuarioInternoIn, EsEmpleadoIn, UsuarioInternoIn, UsuarioInternoOut
 from app.services import clientes as clientes_service
 from app.services import clientes_empresa as clientes_empresa_service
 from app.services import prestamos as prestamos_service
+from app.services import quejas as quejas_service
 from app.services import usuarios_internos as usuarios_internos_service
 
 # Separado de routers/prestamos.py a proposito: refleja la misma separacion que ya existe
@@ -144,3 +146,39 @@ def listar_clientes_empresa(
                            razon_social=c.razon_social, region=c.region, fecha_alta=c.fecha_alta, estado=c.estado)
         for c in empresas
     ]
+
+
+@router.get("/quejas", response_model=list[QuejaRevisionOut])
+def listar_quejas(
+    categoria: str | None = Query(None),
+    db: Session = Depends(get_db),
+    _=Depends(require_role("analista", "admin")),
+    __=Depends(auditar_consulta("cola_quejas")),
+):
+    """V11: cualquier analista/admin ve toda la cola; 'categoria' es un filtro de conveniencia,
+    no una restriccion de acceso (sin RBAC por equipo en esta version — ver nota de alcance de la HU)."""
+    return quejas_service.listar_cola(db, categoria)
+
+
+@router.get("/quejas/metricas", response_model=MetricasQuejasOut)
+def metricas_quejas(
+    db: Session = Depends(get_db),
+    _=Depends(require_role("analista", "admin")),
+):
+    # Registrado ANTES de /quejas/{queja_id} en el archivo: una ruta literal debe declararse
+    # antes que una con parametro que tambien la matchearia (FastAPI resuelve por orden).
+    return quejas_service.metricas(db)
+
+
+@router.patch("/quejas/{queja_id}", response_model=QuejaOut)
+def resolver_queja(
+    queja_id: int,
+    datos: DecisionQuejaIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario: UsuarioActual = Depends(require_role("analista", "admin")),
+):
+    try:
+        return quejas_service.revisar(db, queja_id, usuario.usuario_id, datos.categoria_final)
+    except quejas_service.QuejaYaResuelta:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="La queja ya fue revisada")

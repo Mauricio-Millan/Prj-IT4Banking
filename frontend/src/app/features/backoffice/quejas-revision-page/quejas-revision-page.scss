@@ -1,0 +1,118 @@
+.qrev {
+  &__head {
+    margin-bottom: 1rem;
+  }
+
+  &__metrica {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__filtro {
+    margin-bottom: 1.5rem;
+    max-width: 18rem;
+  }
+
+  &__estado {
+    padding: 2rem 0;
+    color: var(--bc-ink-3);
+
+    &--error {
+      color: var(--bc-danger);
+    }
+  }
+
+  &__lista {
+    display: grid;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+
+  &__fila {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--bc-hairline);
+    display: grid;
+    gap: 0.75rem;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &--alta {
+      background: rgb(210 60 60 / 0.05);
+      border-radius: var(--bc-r-md);
+    }
+  }
+
+  &__fila-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  &__cliente {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  &__fecha {
+    margin: 0.15rem 0 0;
+    font-size: 0.8rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__texto {
+    margin: 0;
+    color: var(--bc-ink-2);
+  }
+
+  &__sugerencia {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+
+  &__confianza {
+    display: inline-block;
+    width: 5rem;
+    height: 0.4rem;
+    background: var(--bc-hairline-strong);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  &__confianza-barra {
+    display: block;
+    height: 100%;
+    background: var(--bc-primary);
+  }
+
+  &__confianza-texto {
+    color: var(--bc-ink-3);
+  }
+
+  &__motivo {
+    color: var(--bc-ink-3);
+    font-style: italic;
+  }
+
+  &__decision {
+    display: flex;
+    gap: 0.75rem;
+
+    .bc-btn[disabled] {
+      opacity: 0.6;
+      cursor: progress;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--bc-danger);
+    font-size: 0.85rem;
+  }
+}

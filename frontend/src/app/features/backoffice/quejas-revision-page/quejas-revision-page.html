@@ -1,1 +1,83 @@
-<h1>Quejas por revisar</h1><p>Revisión humana (RF-09) — pendiente.</p>
+<header class="qrev__head bc-reveal">
+  <span class="bc-eyebrow">Backoffice</span>
+  <h1>Quejas por revisar</h1>
+  @if (metricas(); as m) {
+    <p class="qrev__metrica">
+      {{ m.total_revisadas }} revisadas · {{ m.porcentaje_acuerdo }}% de acuerdo con el modelo
+      ({{ m.confirmadas }} confirmadas, {{ m.corregidas }} corregidas)
+    </p>
+  }
+</header>
+
+<div class="qrev__filtro bc-reveal">
+  <label class="campo">
+    <span class="campo__label">Filtrar por categoría (opcional)</span>
+    <select [ngModel]="filtroCategoria() ?? ''" (ngModelChange)="aplicarFiltro($event)">
+      <option value="">Todas</option>
+      @for (c of categorias; track c) {
+        <option [value]="c">{{ etiquetaCategoria[c] }}</option>
+      }
+    </select>
+  </label>
+</div>
+
+@if (cargando()) {
+  <p class="qrev__estado bc-reveal">Cargando cola de quejas…</p>
+} @else if (error()) {
+  <p class="qrev__estado qrev__estado--error bc-reveal">No pudimos cargar las quejas.</p>
+} @else if (cola().length === 0) {
+  <p class="qrev__estado bc-reveal">No hay quejas pendientes de revisión.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core qrev__lista">
+      @for (q of cola(); track q.queja_id) {
+        <article class="qrev__fila" [class.qrev__fila--alta]="q.prioridad === 'alta'">
+          <header class="qrev__fila-cabecera">
+            <div>
+              <p class="qrev__cliente">{{ q.cliente_nombre }} · {{ q.codigo_cliente }} · {{ q.cliente_documento }}</p>
+              <p class="qrev__fecha">{{ q.creado_en | date:'d MMM y, HH:mm' }}</p>
+            </div>
+            @if (q.prioridad === 'alta') {
+              <span class="bc-tag bc-tag--off">Prioridad alta</span>
+            }
+          </header>
+
+          <p class="qrev__texto">{{ q.texto }}</p>
+
+          <div class="qrev__sugerencia">
+            @if (q.categoria_sugerida) {
+              <span class="bc-tag bc-tag--warn">Sugerido: {{ etiquetaCategoria[q.categoria_sugerida] }}</span>
+              @if (q.confianza) {
+                <span class="qrev__confianza">
+                  <span class="qrev__confianza-barra" [style.width.%]="+q.confianza * 100"></span>
+                </span>
+                <span class="qrev__confianza-texto">{{ (+q.confianza * 100).toFixed(0) }}% confianza</span>
+              }
+              @if (q.motivo) {
+                <span class="qrev__motivo">"{{ q.motivo }}"</span>
+              }
+            } @else {
+              <span class="bc-tag bc-tag--off">Sin sugerencia del modelo — triage manual</span>
+            }
+          </div>
+
+          <div class="qrev__decision">
+            <select [ngModel]="seleccion()[q.queja_id]" (ngModelChange)="elegirCategoria(q.queja_id, $event)">
+              @for (c of categorias; track c) {
+                <option [value]="c">{{ etiquetaCategoria[c] }}</option>
+              }
+            </select>
+            <button type="button" class="bc-btn bc-btn--primary" [disabled]="resolviendo() === q.queja_id"
+                    (click)="resolver(q)">
+              {{ resolviendo() === q.queja_id ? 'Guardando…' : (seleccion()[q.queja_id] === q.categoria_sugerida ? 'Confirmar' : 'Corregir') }}
+            </button>
+          </div>
+
+          @if (errorFila()?.id === q.queja_id) {
+            <p class="qrev__error" role="alert">{{ errorFila()?.mensaje }}</p>
+          }
+        </article>
+      }
+    </div>
+  </section>
+}

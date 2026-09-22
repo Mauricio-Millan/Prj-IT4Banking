@@ -6,6 +6,8 @@ os.environ["JWT_SECRET"] = "secreto-de-pruebas"
 # datos de produccion en juego, ver app/core/config.py (sin default a proposito).
 os.environ["TARJETA_CLAVE_CIFRADO"] = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
 os.environ["TARJETA_CLAVE_HMAC"] = "OTk5OTk5OTk5OTk5OTk5OTk5OTk5OTk5OTk5OTk5OTk="
+# Explicito aunque ya sea el default: cero llamadas de red reales al LLM en CI (HU-Clasificacion-Quejas-GenAI).
+os.environ["LLM_PROVIDER"] = "falso"
 
 import pytest
 from fastapi.testclient import TestClient

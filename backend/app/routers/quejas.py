@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -11,7 +11,10 @@ router = APIRouter(prefix="/quejas", tags=["quejas"])
 
 @router.post("", response_model=QuejaOut, status_code=status.HTTP_201_CREATED)
 def crear(datos: QuejaIn, db: Session = Depends(get_db), cliente_id: int = Depends(require_cliente)):
-    return quejas_service.crear(db, cliente_id, datos)
+    try:
+        return quejas_service.crear(db, cliente_id, datos)
+    except quejas_service.CuotaExcedida:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail="Alcanzaste el límite de quejas por hoy")
 
 
 @router.get("", response_model=list[QuejaOut])

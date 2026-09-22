@@ -6,18 +6,21 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
 
-CATEGORIAS_QUEJA = ("tarjeta", "prestamo", "cuenta", "canal_digital", "atencion", "otro")
+CATEGORIAS_QUEJA = ("producto", "servicio", "fraude", "otro")
 _CATS_SQL = ",".join(f"'{c}'" for c in CATEGORIAS_QUEJA)
 
 
 class Queja(Base):
-    """RF-09: clasificada por GenAI, siempre revisada por un analista (human-in-the-loop)."""
+    """RF-09: clasificada por GenAI, siempre revisada por un analista (human-in-the-loop).
+    'motivo' del modelo no es una columna propia: vive en el genai_log mas reciente de la
+    queja (evita una segunda fuente de clasificacion que tambien podria alucinar)."""
 
     __tablename__ = "queja"
     __table_args__ = (
         CheckConstraint(f"categoria_sugerida IS NULL OR categoria_sugerida IN ({_CATS_SQL})", name="ck_queja_cat_sugerida"),
         CheckConstraint(f"categoria_final IS NULL OR categoria_final IN ({_CATS_SQL})", name="ck_queja_cat_final"),
         CheckConstraint("estado_revision IN ('pendiente','confirmada','corregida')", name="ck_queja_estado_revision"),
+        CheckConstraint("prioridad IN ('normal','alta')", name="ck_queja_prioridad"),
     )
 
     queja_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -28,6 +31,9 @@ class Queja(Base):
     categoria_final: Mapped[str | None] = mapped_column(String(20))
     estado_revision: Mapped[str] = mapped_column(String(20), default="pendiente", index=True)
     revisado_por: Mapped[int | None] = mapped_column(ForeignKey("usuario.usuario_id"))
+    # Senales de texto (LLM) + reincidencia (SQL) -> prioridad; nunca un juicio directo del
+    # modelo. Orden de la cola: prioridad DESC, creado_en ASC (ver services/quejas.py::listar_cola).
+    prioridad: Mapped[str] = mapped_column(String(10), default="normal")
     creado_en: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
