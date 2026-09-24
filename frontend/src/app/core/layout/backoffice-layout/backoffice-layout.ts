@@ -15,6 +15,7 @@ export class BackofficeLayout {
   // el backend vuelve a exigir el rol con roleGuard(['admin']) en la ruta, esto es solo UX.
   protected readonly menu = computed<ItemMenu[]>(() => [
     { ruta: '/backoffice/prestamos', etiqueta: 'Préstamos por aprobar' },
+    { ruta: '/backoffice/prestamos/cartera', etiqueta: 'Cartera de préstamos' },
     { ruta: '/backoffice/quejas', etiqueta: 'Quejas por revisar' },
     ...(this.auth.rol() === 'admin'
       ? [

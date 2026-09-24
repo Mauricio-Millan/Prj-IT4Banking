@@ -1,0 +1,7 @@
+prefect
+pandas
+sqlalchemy>=2.0
+pyodbc
+pyarrow
+python-dotenv
+pytest

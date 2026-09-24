@@ -59,6 +59,7 @@ class PrestamoRevisionOut(PrestamoOut):
     evalua. cliente_documento sale enmascarado (Ley 29733): el analista ya tiene codigo_cliente
     para identificar sin necesitar el DNI completo."""
     cliente_id: int
+    codigo_cliente: str
     cliente_nombre: str
     cliente_documento: str
 

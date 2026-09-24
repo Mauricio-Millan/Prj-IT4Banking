@@ -4,6 +4,7 @@ import { roleGuard } from '../../core/auth/role-guard';
 export const BACKOFFICE_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'prestamos' },
   { path: 'prestamos', loadComponent: () => import('./prestamos-revision-page/prestamos-revision-page').then(m => m.PrestamosRevisionPage) },
+  { path: 'prestamos/cartera', loadComponent: () => import('./cartera-prestamos-page/cartera-prestamos-page').then(m => m.CarteraPrestamosPage) },
   { path: 'quejas', loadComponent: () => import('./quejas-revision-page/quejas-revision-page').then(m => m.QuejasRevisionPage) },
   {
     path: 'usuarios',

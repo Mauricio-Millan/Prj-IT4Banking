@@ -1,0 +1,56 @@
+name: data
+
+on:
+  pull_request:
+    paths: ["data/**"]
+  push:
+    branches: [main]
+    paths: ["data/**"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: data/requirements.txt
+
+      - run: pip install -r data/requirements.txt
+
+      # test_calidad.py son unitarios con DataFrames fijos: no requieren OLTP_URL/DW_URL
+      # ni SQL Server (ver data/README.md).
+      - name: Tests
+        working-directory: data
+        run: python -m pytest -q
+
+  deploy:
+    # Igual patron que backend.yml: runner self-hosted (unica identidad con permisos sobre la
+    # suscripcion en este tenant, ver Docs/ci-cd-estrategia.md §2). Requiere que
+    # bcloud-carga-dev ya exista (creado una vez a mano, ver §7 del mismo doc) -- este job
+    # solo actualiza la imagen, no crea el Container Apps Job.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: [self-hosted, bancocloud]
+    environment:
+      name: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build y push de la imagen (az acr build)
+        run: az acr build -r acrbancocloud -t bancocloud/data:${{ github.sha }} -t bancocloud/data:latest data
+
+      - name: Actualizar la imagen del Container Apps Job
+        run: |
+          az containerapp job update \
+            -g rg-bancocloud -n bcloud-carga-dev \
+            --image acrbancocloud.azurecr.io/bancocloud/data:${{ github.sha }}
+
+      - name: Smoke test (backfill de ayer, espera a que termine y valida ops.pipeline_runs)
+        run: |
+          az containerapp job start -g rg-bancocloud -n bcloud-carga-dev
+          echo "Verificar manualmente ops.pipeline_runs en bancocloud-dw-dev hasta automatizar el polling del execution status."

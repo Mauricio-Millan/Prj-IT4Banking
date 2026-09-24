@@ -1,5 +1,7 @@
 # Desarrollo local: SQL Server 2022 Express (mismo motor T-SQL que Azure SQL).
 # Uso: docker compose up -d   →   DATABASE_URL=mssql+pyodbc://sa:BancoCloud!Local1@localhost:1433/bancocloud?driver=ODBC+Driver+17+for+SQL+Server&TrustServerCertificate=yes
+# El pipeline (data/) usa el mismo servidor, base separada `bancocloud_dw` (silver/dq/ops),
+# creada e inicializada por dw-init al primer `docker compose up` (HU-Pipeline-ETL-Bronze-Silver).
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -11,6 +13,25 @@ services:
       - "1433:1433"
     volumes:
       - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 5s
+      retries: 20
+
+  dw-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    volumes:
+      - ./data/sql:/sql:ro
+    entrypoint: >
+      bash -c "
+      /opt/mssql-tools18/bin/sqlcmd -C -S sqlserver -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"IF DB_ID('bancocloud_dw') IS NULL CREATE DATABASE bancocloud_dw\" &&
+      /opt/mssql-tools18/bin/sqlcmd -C -S sqlserver -U sa -P \"$$MSSQL_SA_PASSWORD\" -d bancocloud_dw -i /sql/ddl_silver.sql
+      "
+    environment:
+      MSSQL_SA_PASSWORD: "BancoCloud!Local1"
 
 volumes:
   sqldata:

@@ -88,3 +88,72 @@ def test_consultar_cola_de_prestamos_deja_rastro_en_audit_log(cliente, registrad
 
     cliente.get("/backoffice/prestamos", headers=token_analista)
     assert db.query(AuditLog).filter_by(accion="consultar", entidad="cola_prestamos").count() == 1
+
+
+# --- HU-Backoffice-Cartera-Prestamos ---
+
+def test_sin_parametros_se_comporta_igual_que_antes(cliente, registrado, token_analista, db):
+    headers, _, cuenta_id = registrado()
+    _solicitar_grande(cliente, headers, cuenta_id)
+    prestamo_id = cliente.get("/backoffice/prestamos", headers=token_analista).json()[0]["prestamo_id"]
+    cliente.patch(f"/backoffice/prestamos/{prestamo_id}", headers=token_analista, json={"decision": "aprobar"})
+
+    r = cliente.get("/backoffice/prestamos", headers=token_analista)
+    assert r.json() == []  # el ahora-vigente no aparece sin filtro (default sigue siendo "solicitado")
+
+
+def test_filtrar_por_estado_vigente_incluye_mora(cliente, registrado, token_analista):
+    headers, _, cuenta_id = registrado()
+    r = cliente.post("/prestamos/solicitudes", headers=headers, json={"monto_original": "1000.00", "plazo": 6, "cuenta_id": cuenta_id})
+    assert r.json()["estado"] == "vigente"
+
+    r = cliente.get("/backoffice/prestamos?estado=vigente", headers=token_analista)
+    assert r.status_code == 200
+    fila = r.json()[0]
+    assert fila["estado"] == "vigente"
+    assert "saldo_capital" in fila and "dias_mora" in fila and "bucket_mora" in fila
+
+
+def test_estado_todos_devuelve_todos_los_estados(cliente, registrado, token_analista):
+    headers, _, cuenta_id = registrado()
+    cliente.post("/prestamos/solicitudes", headers=headers, json={"monto_original": "1000.00", "plazo": 6, "cuenta_id": cuenta_id})
+    _solicitar_grande(cliente, headers, cuenta_id)
+
+    r = cliente.get("/backoffice/prestamos?estado=todos", headers=token_analista)
+    estados = {p["estado"] for p in r.json()}
+    assert estados == {"vigente", "solicitado"}
+
+
+def test_estado_invalido_da_422(cliente, registrado, token_analista):
+    headers, _, cuenta_id = registrado()
+    _solicitar_grande(cliente, headers, cuenta_id)
+
+    r = cliente.get("/backoffice/prestamos?estado=inventado", headers=token_analista)
+    assert r.status_code == 422
+
+
+def test_buscar_por_codigo_de_cliente_exacto(cliente, registrado, token_analista):
+    headers, _, cuenta_id = registrado()
+    _solicitar_grande(cliente, headers, cuenta_id)
+    codigo = cliente.get("/backoffice/prestamos?estado=todos", headers=token_analista).json()[0]["codigo_cliente"]
+
+    r = cliente.get(f"/backoffice/prestamos?estado=todos&codigo_cliente={codigo}", headers=token_analista)
+    assert len(r.json()) == 1
+    assert r.json()[0]["codigo_cliente"] == codigo
+
+
+def test_codigo_cliente_inexistente_da_lista_vacia_no_error(cliente, registrado, token_analista):
+    headers, _, cuenta_id = registrado()
+    _solicitar_grande(cliente, headers, cuenta_id)
+
+    r = cliente.get("/backoffice/prestamos?estado=todos&codigo_cliente=0000000000", headers=token_analista)
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_codigo_cliente_visible_documento_enmascarado(cliente, registrado, token_analista):
+    headers, _, cuenta_id = registrado()
+    _solicitar_grande(cliente, headers, cuenta_id)
+
+    fila = cliente.get("/backoffice/prestamos?estado=todos", headers=token_analista).json()[0]
+    assert fila["codigo_cliente"] and re.fullmatch(r"\*+\d{4}", fila["cliente_documento"])

@@ -34,6 +34,13 @@ class PrestamoNoVigente(Exception):
     pass
 
 
+class EstadoInvalido(Exception):
+    pass
+
+
+ESTADOS_PRESTAMO = ("solicitado", "aprobado", "rechazado", "vigente", "cancelado")
+
+
 def generar_cronograma(monto: Decimal, tasa: Decimal, plazo: int, fecha_desembolso: date) -> list[dict]:
     """Sistema frances, cuota fija (HU-Ciclo-Vida-Prestamo). Pura -sin DB-, testeable directo
     con el vector de la HU. Invariante: sum(capital) == monto exacto (la ultima cuota absorbe
@@ -259,16 +266,21 @@ def pagar_cuota(db: Session, prestamo_id: int, cliente_id: int, usuario_id: int,
     }
 
 
-def listar_pendientes(db: Session) -> list[PrestamoRevisionOut]:
-    filas = db.execute(
-        select(Prestamo, Cliente)
-        .join(Cliente, Prestamo.cliente_id == Cliente.cliente_id)
-        .where(Prestamo.estado == "solicitado")
-        .order_by(Prestamo.prestamo_id)
-    ).all()
+def listar_cartera(db: Session, estado: str = "solicitado", codigo_cliente: str | None = None) -> list[PrestamoRevisionOut]:
+    """HU-Backoffice-Cartera-Prestamos: estado="todos" es el unico valor que no es un estado
+    real de Prestamo (sin filtro); cualquier otro valor fuera del CHECK -> EstadoInvalido (422)."""
+    if estado != "todos" and estado not in ESTADOS_PRESTAMO:
+        raise EstadoInvalido()
+
+    consulta = select(Prestamo, Cliente).join(Cliente, Prestamo.cliente_id == Cliente.cliente_id)
+    if estado != "todos":
+        consulta = consulta.where(Prestamo.estado == estado)
+    if codigo_cliente is not None:
+        consulta = consulta.where(Cliente.codigo_cliente == codigo_cliente)
+    filas = db.execute(consulta.order_by(Prestamo.prestamo_id)).all()
     return [
         PrestamoRevisionOut(
-            **a_schema(p).model_dump(), cliente_id=c.cliente_id,
+            **a_schema(p).model_dump(), cliente_id=c.cliente_id, codigo_cliente=c.codigo_cliente,
             cliente_nombre=f"{c.nombres} {c.apellidos}", cliente_documento=c.numero_documento,
         )
         for p, c in filas

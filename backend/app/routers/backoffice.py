@@ -22,12 +22,17 @@ router = APIRouter(prefix="/backoffice", tags=["backoffice"])
 
 
 @router.get("/prestamos", response_model=list[PrestamoRevisionOut])
-def listar_pendientes(
+def listar_prestamos(
+    estado: str = "solicitado",
+    codigo_cliente: str | None = Query(None),
     db: Session = Depends(get_db),
     _=Depends(require_role("analista", "admin")),
     __=Depends(auditar_consulta("cola_prestamos")),
 ):
-    return prestamos_service.listar_pendientes(db)
+    try:
+        return prestamos_service.listar_cartera(db, estado=estado, codigo_cliente=codigo_cliente)
+    except prestamos_service.EstadoInvalido:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Estado de préstamo inválido")
 
 
 @router.patch("/prestamos/{prestamo_id}", response_model=PrestamoOut)

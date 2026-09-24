@@ -1,0 +1,60 @@
+<header class="cart__head bc-reveal">
+  <span class="bc-eyebrow">Backoffice</span>
+  <h1>Cartera de préstamos</h1>
+  <p>Consulta de solo lectura de cualquier préstamo, en cualquier estado. Para aprobar o rechazar una
+    solicitud, ve a la <a routerLink="/backoffice/prestamos">cola de aprobación</a>.</p>
+</header>
+
+<div class="cart__filtros bc-reveal">
+  <label class="campo">
+    <span class="campo__label">Estado</span>
+    <select [ngModel]="estado()" (ngModelChange)="estado.set($event); buscar()">
+      @for (e of estados; track e.valor) {
+        <option [value]="e.valor">{{ e.etiqueta }}</option>
+      }
+    </select>
+  </label>
+  <label class="campo">
+    <span class="campo__label">Código de cliente (exacto)</span>
+    <input type="text" [ngModel]="codigoCliente()" (ngModelChange)="codigoCliente.set($event)"
+           (keyup.enter)="buscar()" placeholder="0000000000" />
+  </label>
+  <button type="button" class="bc-btn bc-btn--primary" (click)="buscar()">Buscar</button>
+</div>
+
+@if (cargando()) {
+  <p class="cart__estado bc-reveal">Cargando cartera…</p>
+} @else if (error()) {
+  <p class="cart__estado cart__estado--error bc-reveal">No pudimos cargar la cartera.</p>
+} @else if (cartera().length === 0) {
+  <p class="cart__estado bc-reveal">No hay préstamos que coincidan con el filtro.</p>
+} @else {
+  <section class="bc-shell bc-reveal">
+    <div class="bc-core cart__lista">
+      @for (p of cartera(); track p.prestamo_id) {
+        <article class="cart__fila">
+          <div>
+            <p class="cart__cliente">{{ p.cliente_nombre }} · {{ p.codigo_cliente }} · {{ p.cliente_documento }}</p>
+            <p class="cart__detalle">
+              S/ {{ p.monto_original }} · saldo S/ {{ p.saldo_capital }} · {{ p.plazo }} meses · {{ p.tasa }}% TEA
+            </p>
+          </div>
+          <div class="cart__estados">
+            @if (p.estado === 'vigente') {
+              @if (p.dias_mora > 0) {
+                <span class="bc-tag bc-tag--warn">En mora ({{ p.dias_mora }} días · {{ p.bucket_mora }})</span>
+              } @else {
+                <span class="bc-tag bc-tag--ok">Al día</span>
+              }
+            }
+            <span class="bc-tag" [class.bc-tag--ok]="p.estado === 'vigente'"
+                  [class.bc-tag--warn]="p.estado === 'solicitado' || p.estado === 'aprobado'"
+                  [class.bc-tag--off]="p.estado === 'rechazado' || p.estado === 'cancelado'">
+              {{ p.estado }}
+            </span>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+}
