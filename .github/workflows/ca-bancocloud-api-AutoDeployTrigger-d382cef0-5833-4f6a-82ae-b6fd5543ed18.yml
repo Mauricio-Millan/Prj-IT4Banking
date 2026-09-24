@@ -2,21 +2,35 @@ name: Trigger auto deployment for ca-bancocloud-api
 
 # When this action will be executed
 on:
-  # Automatically trigger it when detected changes in repo
+  # Acotado a backend/** y al propio workflow: antes se disparaba con
+  # cualquier cambio en el repo (paths: ['**']), incluyendo Docs/ o frontend/.
   push:
-    branches: 
+    branches:
       [ main ]
     paths:
-    - '**'
+    - 'backend/**'
     - '.github/workflows/ca-bancocloud-api-AutoDeployTrigger-d382cef0-5833-4f6a-82ae-b6fd5543ed18.yml'
 
-  # Allow manual trigger 
-  workflow_dispatch:      
+  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  # Gate de tests: build-and-deploy ya no corre si esto falla (needs: test).
+  # Antes este workflow desplegaba directo sin ejecutar ningun test.
+  test:
     runs-on: ubuntu-latest
-    permissions: 
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: backend/requirements.txt }
+      - run: pip install -r backend/requirements.txt
+      - working-directory: backend
+        run: python -m pytest -q
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
       id-token: write #This is required for requesting the OIDC JWT Token
       contents: read #Required when GH token is used to authenticate with private repo
 
