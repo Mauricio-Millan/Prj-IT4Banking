@@ -1,5 +1,12 @@
 name: backend
 
+# Solo gate de PR/push: valida el codigo. El despliegue real a dev vive
+# unicamente en ca-bancocloud-api-AutoDeployTrigger-*.yml (OIDC, sin runner
+# self-hosted). Antes este workflow tenia su propio job "deploy" corriendo
+# en paralelo al OIDC contra el mismo Container App -- dos caminos para el
+# mismo recurso, uno de ellos (el OIDC) sin gate de test. Ver
+# Docs/ci-cd-estrategia.md #1.2.
+
 on:
   pull_request:
     paths: ["backend/**"]
@@ -28,34 +35,44 @@ jobs:
         working-directory: backend
         run: python -m pytest -q
 
-  deploy:
-    # Solo en push a main: en PR nos quedamos en "test". Corre en el runner
-    # self-hosted porque este tenant academico no permite crear ninguna
-    # identidad con permisos sobre la suscripcion (ver docs/ci-cd-estrategia.md).
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  # Despliegue a QA, solo a demanda (decision del equipo: no en cada push a
+  # develop). Reusa la identidad OIDC del Deployment Center: tiene Contributor
+  # a nivel del resource group completo, asi que alcanza tambien a
+  # ca-bancocloud-api-test sin crear ninguna identidad nueva.
+  deploy-test:
+    if: github.event_name == 'workflow_dispatch'
     needs: test
-    runs-on: [self-hosted, bancocloud]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     environment:
-      name: dev
-      url: https://ca-bancocloud-api.ashyrock-5daec08d.canadacentral.azurecontainerapps.io
+      name: test
+      url: https://ca-bancocloud-api-test.ashyrock-5daec08d.canadacentral.azurecontainerapps.io
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build y push de la imagen (az acr build)
-        run: az acr build -r acrbancocloud -t bancocloud/backend:${{ github.sha }} -t bancocloud/backend:latest backend
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.CABANCOCLOUDAPI_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CABANCOCLOUDAPI_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CABANCOCLOUDAPI_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Actualizar Container App
+      - name: Build y push de la imagen (az acr build)
+        run: az acr build -r acrbancocloud -t bancocloud/backend:${{ github.sha }}-test backend
+
+      - name: Actualizar Container App de test
         run: |
           az containerapp update \
-            -g rg-bancocloud -n ca-bancocloud-api \
-            --image acrbancocloud.azurecr.io/bancocloud/backend:${{ github.sha }}
+            -g rg-bancocloud -n ca-bancocloud-api-test \
+            --image acrbancocloud.azurecr.io/bancocloud/backend:${{ github.sha }}-test
 
-      - name: Verificar que el API responde (smoke test)
+      - name: Verificar que el API de test responde (smoke test)
         run: |
           for i in $(seq 1 12); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" https://ca-bancocloud-api.ashyrock-5daec08d.canadacentral.azurecontainerapps.io/openapi.json)
-            [ "$code" = "200" ] && echo "OK: API responde (200)" && exit 0
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://ca-bancocloud-api-test.ashyrock-5daec08d.canadacentral.azurecontainerapps.io/openapi.json)
+            [ "$code" = "200" ] && echo "OK: API de test responde (200)" && exit 0
             sleep 10
           done
-          echo "::error::El API no respondio 200 tras el despliegue"
+          echo "::error::El API de test no respondio 200 tras el despliegue"
           exit 1

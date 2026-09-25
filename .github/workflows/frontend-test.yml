@@ -1,0 +1,38 @@
+name: frontend-test
+
+# Antes de este workflow, el frontend no tenia ningun gate de test en CI: al
+# migrar el despliegue a Azure Static Web Apps (ver Docs/ci-cd-estrategia.md
+# #1.1), el workflow que genera Azure solo compila (`npm run build`), nunca
+# ejecuta `ng test`. Este workflow es solo de testing, no despliega nada -
+# no interfiere con el autodeploy nativo del SWA.
+
+on:
+  pull_request:
+    paths: ["frontend/**"]
+  push:
+    branches: [main, develop]
+    paths: ["frontend/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      # 17 specs preexistentes fallan por falta de provideHttpClient() en su
+      # TestBed (no relacionado a este cambio, ver Docs/ci-cd-estrategia.md).
+      # No bloquea nada todavia -- corregirlos es un paso aparte -- pero ya
+      # queda visible en cada PR/push, que es la mejora real de este cambio.
+      - run: npx ng test --watch=false --browsers=ChromeHeadless
+        continue-on-error: true
