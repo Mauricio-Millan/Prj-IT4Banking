@@ -10,6 +10,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .coverage
+*.db
 
 # node / angular
 node_modules/
