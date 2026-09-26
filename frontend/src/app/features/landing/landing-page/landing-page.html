@@ -5,6 +5,9 @@
       BancoCloud
     </span>
     <nav class="land__nav" aria-label="Acceso">
+      <a href="#tarjetas">Productos</a>
+      <a href="#beneficios">Beneficios</a>
+      <a routerLink="/tarifas">Tarifario</a>
       <a routerLink="/login">Iniciar sesión</a>
       <a routerLink="/registro" class="bc-btn bc-btn--primary land__nav-cta">
         Crear cuenta
@@ -15,19 +18,67 @@
 
   <!-- S1: Hero -->
   <section class="land__hero">
-    <span class="bc-eyebrow bc-reveal">Banca 100% digital</span>
-    <h1 class="bc-reveal">Tu banco, sin oficinas ni filas</h1>
-    <p class="land__hero-sub bc-reveal">
-      Abre una cuenta de ahorro en minutos, recibe tu tarjeta de débito virtual al instante
-      y transfiere dinero cuando lo necesites, todo desde tu celular o tu computadora.
-    </p>
-    <div class="land__hero-cta bc-reveal">
-      <a routerLink="/registro" class="bc-btn bc-btn--primary">
-        Crear cuenta
-        <span class="bc-btn__icon" aria-hidden="true">→</span>
-      </a>
-      <a routerLink="/login" class="bc-btn bc-btn--ghost">Iniciar sesión</a>
+    <div class="land__hero-grid">
+      <div class="land__hero-texto">
+        <span class="bc-eyebrow bc-reveal">Banca 100% digital</span>
+        <h1 class="bc-reveal">Tu banco, sin oficinas ni filas</h1>
+        <p class="land__hero-sub bc-reveal">
+          Abre una cuenta de ahorro en minutos, recibe tu tarjeta de débito virtual al instante
+          y transfiere dinero cuando lo necesites, todo desde tu celular o tu computadora.
+        </p>
+        <div class="land__hero-cta bc-reveal">
+          <a routerLink="/registro" class="bc-btn bc-btn--primary">
+            Crear cuenta
+            <span class="bc-btn__icon" aria-hidden="true">→</span>
+          </a>
+          <a routerLink="/login" class="bc-btn bc-btn--ghost">Iniciar sesión</a>
+        </div>
+        <ul class="land__checklist bc-reveal">
+          <li>✓ Sin comisiones ocultas</li>
+          <li>✓ 100% digital</li>
+          <li>✓ Seguridad bancaria</li>
+        </ul>
+      </div>
+
+      <div class="land__hero-visual bc-reveal">
+        <div class="land__tarjeta">
+          <header>
+            <span>CLOUD</span>
+            <span>VISA</span>
+          </header>
+          <p class="land__tarjeta-numero">4527 •••• •••• 0831</p>
+          <div class="land__tarjeta-pie">
+            <div>
+              <span>Titular</span>
+              <strong>TU NOMBRE AQUÍ</strong>
+            </div>
+            <div>
+              <span>Válida hasta</span>
+              <strong>09/30</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="land__flotante land__flotante--transaccion">
+          <span class="land__flotante-icono">↗</span>
+          <div>
+            <p>Nueva transacción</p>
+            <strong>S/ 250.00</strong>
+          </div>
+          <span class="bc-tag bc-tag--ok">Exitosa</span>
+        </div>
+      </div>
     </div>
+  </section>
+
+  <!-- Estadísticas: contenido de ejemplo para la demo del curso -->
+  <section class="land__stats">
+    @for (s of estadisticas; track s[1]) {
+      <div class="land__stat bc-reveal">
+        <p class="land__stat-numero">{{ s[0] }}</p>
+        <p class="land__stat-etiqueta">{{ s[1] }}</p>
+      </div>
+    }
   </section>
 
   <!-- S2: Qué somos -->
@@ -56,15 +107,124 @@
     </div>
   </section>
 
-  <!-- S4: Herramientas y características -->
-  <section class="land__seccion land__seccion--oscura">
-    <span class="bc-eyebrow bc-reveal">Lo que ya puedes hacer</span>
-    <h2 class="bc-reveal">Herramientas y características</h2>
-    <div class="land__grid land__grid--herramientas">
-      @for (h of herramientas; track h.nombre) {
-        <article class="land__herramienta bc-reveal">
-          <h3>{{ h.nombre }}</h3>
-          <p>{{ h.detalle }}</p>
+  <!-- Productos: tarjeta destacada + simulador de préstamos con tasas reales -->
+  <section id="tarjetas" class="land__seccion">
+    <div class="land__seccion-cabecera">
+      <span class="bc-eyebrow bc-reveal">Nuestros productos</span>
+      <h2 class="bc-reveal">Todo lo que necesitas, desde un solo lugar</h2>
+    </div>
+
+    <div class="land__productos">
+      <article class="land__producto land__producto--tarjeta bc-reveal">
+        <span class="bc-tag bc-tag--ok">Más elegida</span>
+        <h3>Tu tarjeta de débito sin comisiones</h3>
+        <p>Compra online, paga en establecimientos y controla tus gastos desde tu banca.</p>
+        <ul class="land__lista-check">
+          <li>Retiros disponibles las 24 horas</li>
+          <li>Emisión inmediata al abrir tu cuenta</li>
+          <li>Control total desde tu banca</li>
+          <li>PAN y CVV protegidos, revelado bajo demanda</li>
+        </ul>
+        <a routerLink="/registro" class="bc-btn bc-btn--primary">
+          Solicitar tarjeta
+          <span class="bc-btn__icon" aria-hidden="true">→</span>
+        </a>
+      </article>
+
+      <article id="prestamos" class="land__producto land__producto--simulador bc-reveal">
+        <span class="bc-tag bc-tag--warn">Simulador</span>
+        <h3>Préstamos a tu medida</h3>
+        <p>Tu segmento se asigna al abrir la cuenta y define tu tasa y tu límite. Elige uno para ver un ejemplo real.</p>
+
+        <label class="campo land__campo">
+          <span class="campo__label">Segmento</span>
+          <select [ngModel]="segmentoId()" (ngModelChange)="cambiarSegmento($event)">
+            @for (s of segmentos; track s.id) {
+              <option [value]="s.id">{{ s.etiqueta }} — {{ s.tasa }}% TEA</option>
+            }
+          </select>
+        </label>
+
+        <div class="land__simulador-bloque">
+          <div class="land__simulador-fila">
+            <span>¿Cuánto necesitas?</span>
+            <strong>{{ monto() | currency: 'PEN' }}</strong>
+          </div>
+          <input type="range" min="500" [attr.max]="segmento().limite" step="100"
+                 [ngModel]="monto()" (ngModelChange)="monto.set($event)" />
+          <div class="land__simulador-rango">
+            <span>S/ 500</span>
+            <span>{{ segmento().limite | currency: 'PEN' : 'symbol' : '1.0-0' }}</span>
+          </div>
+        </div>
+
+        <label class="campo land__campo">
+          <span class="campo__label">Plazo</span>
+          <select [ngModel]="plazo()" (ngModelChange)="plazo.set($event)">
+            @for (p of plazos; track p) {
+              <option [value]="p">{{ p }} meses</option>
+            }
+          </select>
+        </label>
+
+        <div class="land__simulador-resultado">
+          <div>
+            <span>Cuota mensual estimada</span>
+            <strong>{{ cuotaMensual() | currency: 'PEN' }}</strong>
+          </div>
+          <a routerLink="/registro" class="bc-btn bc-btn--primary">Solicitar</a>
+        </div>
+        <p class="land__simulador-nota">
+          Tasa real del segmento {{ segmento().etiqueta }}: {{ segmento().tasa }}% TEA. Estimado sin TCEA ni
+          seguros — no incluye IVA ni cargos adicionales; tu segmento se define automáticamente al abrir tu cuenta.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Seguridad -->
+  <section id="beneficios" class="land__seccion land__seccion--oscura">
+    <div class="land__seguridad">
+      <div class="land__seguridad-texto">
+        <span class="bc-eyebrow bc-reveal">Confianza</span>
+        <h2 class="bc-reveal">Seguridad de nivel bancario</h2>
+        <p class="bc-reveal">
+          Protegemos tus operaciones con tecnología diseñada para mantener tu información y tu dinero seguros.
+        </p>
+        <div class="land__grid land__grid--herramientas">
+          @for (h of herramientas; track h.nombre) {
+            <article class="land__herramienta bc-reveal">
+              <h3>{{ h.nombre }}</h3>
+              <p>{{ h.detalle }}</p>
+            </article>
+          }
+        </div>
+      </div>
+
+      <div class="land__seguridad-visual bc-reveal" aria-hidden="true">
+        <div class="land__seguridad-nucleo">🔒</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonios: contenido de ejemplo para la demo del curso -->
+  <section class="land__seccion land__seccion--centrada">
+    <span class="bc-eyebrow bc-reveal">Experiencias</span>
+    <h2 class="bc-reveal">Lo que dicen nuestros clientes</h2>
+    <div class="land__testimonios">
+      @for (t of testimonios; track t.nombre) {
+        <article class="land__testimonio bc-shell bc-reveal">
+          <div class="bc-core land__testimonio-inner">
+            <div class="land__testimonio-cabecera">
+              <span class="land__avatar" aria-hidden="true">{{ t.iniciales }}</span>
+              <div>
+                <p>{{ t.nombre }}</p>
+                <p>{{ t.rol }}</p>
+              </div>
+            </div>
+            <p class="land__testimonio-estrellas" aria-hidden="true">★★★★★</p>
+            <p class="land__testimonio-texto">“{{ t.texto }}”</p>
+          </div>
         </article>
       }
     </div>
