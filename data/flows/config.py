@@ -19,6 +19,14 @@ def dw_url() -> str:
 # fsspec/adlfs para resolver el esquema abfs:// automaticamente, sin codigo propio de subida).
 BRONZE_PATH = os.environ.get("BRONZE_PATH", "./bronze")
 
+
+def storage_options() -> dict:
+    """Credenciales para fsspec/adlfs cuando BRONZE_PATH es abfs:// (vacio para filesystem local).
+    Auth por account key (Container App secret), no Managed Identity -- el tenant academico la
+    bloquea (ver Docs/ci-cd-estrategia.md #2)."""
+    key = os.environ.get("AZURE_STORAGE_ACCOUNT_KEY")
+    return {"account_key": key} if key else {}
+
 VERSION_IMAGEN = os.environ.get("VERSION_IMAGEN", "local")
 # Sal para el hash del documento en silver.cliente (V2/V10). Debe ser la misma entre corridas
 # para que un mismo documento produzca siempre el mismo hash (permite JOIN/dedup en analitica
