@@ -10,7 +10,7 @@ on:
   pull_request:
     paths: ["frontend/**"]
   push:
-    branches: [main, develop]
+    branches: [main, Test]
     paths: ["frontend/**"]
 
 jobs:
