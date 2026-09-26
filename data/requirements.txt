@@ -3,5 +3,7 @@ pandas
 sqlalchemy>=2.0
 pyodbc
 pyarrow
+fsspec
+adlfs
 python-dotenv
 pytest

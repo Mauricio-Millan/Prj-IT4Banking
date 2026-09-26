@@ -15,6 +15,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import fsspec
 import pandas as pd
 from prefect import flow, task
 from sqlalchemy import create_engine, text
@@ -30,25 +31,31 @@ def extraer_datos(fecha: date) -> dict[str, pd.DataFrame]:
 @task
 def escribir_bronze(crudo: dict[str, pd.DataFrame], fecha: date) -> None:
     """Inmutable: una re-ejecucion de la misma fecha sobrescribe la particion completa (V1).
-    ponytail: solo filesystem local/montado por ahora (Path). BRONZE_PATH="abfs://..." (ADLS)
-    funcionaria con df.to_parquet via fsspec/adlfs sin cambiar esta funcion, pero el hash
-    sha256 y el manifest asumen Path -- cablear eso es el paso pendiente cuando exista el
-    storage account real (ver runbook en Docs/ci-cd-estrategia.md)."""
-    base = Path(config.BRONZE_PATH)
+    Soporta filesystem local (docker-compose, BRONZE_PATH="./bronze") y ADLS Gen2 real
+    (BRONZE_PATH="abfs://bronze-<env>@<storage>.dfs.core.windows.net", ver runbook en
+    Docs/ci-cd-estrategia.md #7) con el mismo codigo: fsspec resuelve ambos esquemas."""
+    es_adls = config.BRONZE_PATH.startswith("abfs://")
+    opts = config.storage_options()
+    base = config.BRONZE_PATH.rstrip("/")
     manifest = {
         "fecha": fecha.isoformat(), "version_imagen": config.VERSION_IMAGEN,
         "timestamp": datetime.utcnow().isoformat(), "tablas": {},
     }
     for tabla, df in crudo.items():
-        carpeta = base / tabla / f"fecha={fecha.isoformat()}"
-        carpeta.mkdir(parents=True, exist_ok=True)
-        archivo = carpeta / "part-0.parquet"
-        df.to_parquet(archivo, index=False)
-        manifest["tablas"][tabla] = {"filas": len(df), "sha256": hashlib.sha256(archivo.read_bytes()).hexdigest()}
+        carpeta = f"{base}/{tabla}/fecha={fecha.isoformat()}"
+        archivo = f"{carpeta}/part-0.parquet"
+        if not es_adls:
+            Path(carpeta).mkdir(parents=True, exist_ok=True)
+        df.to_parquet(archivo, index=False, storage_options=opts or None)
+        with fsspec.open(archivo, "rb", **opts) as f:
+            contenido = f.read()
+        manifest["tablas"][tabla] = {"filas": len(df), "sha256": hashlib.sha256(contenido).hexdigest()}
 
-    manifest_dir = base / "_manifest"
-    manifest_dir.mkdir(parents=True, exist_ok=True)
-    (manifest_dir / f"fecha={fecha.isoformat()}.json").write_text(json.dumps(manifest, indent=2, default=str))
+    manifest_dir = f"{base}/_manifest"
+    if not es_adls:
+        Path(manifest_dir).mkdir(parents=True, exist_ok=True)
+    with fsspec.open(f"{manifest_dir}/fecha={fecha.isoformat()}.json", "w", **opts) as f:
+        f.write(json.dumps(manifest, indent=2, default=str))
 
 
 @task
