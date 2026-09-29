@@ -1,10 +1,12 @@
 """Job diario: (1, HU-Ciclo-Vida-Prestamo) marca cuotas vencidas y recalcula dias_mora/
-bucket_mora de los prestamos vigentes; (2, HU-Segmentacion-Clientes) re-evalua joven/clasico/
-premium de cada cliente que no sea 'empresa', usando el saldo ya actualizado del dia. Un solo
-Job, un solo cron: no hay razon para dos procesos separados. Idempotente: correrlo dos veces el
-mismo dia no cambia nada la segunda vez (V8 de Ciclo-Vida-Prestamo), porque el UPDATE de
-vencidas solo toca filas que siguen 'pendiente' y ambos recalculos se derivan siempre del
-estado actual, no de forma incremental.
+bucket_mora de los prestamos vigentes; (2, HU-Gastos-Operativos-Intereses-Pasivos) devenga el
+interes pasivo de cada cuenta de ahorro activa, ANTES de segmentacion para que esta ya vea el
+saldo acreditado; (3, HU-Segmentacion-Clientes) re-evalua joven/clasico/premium de cada cliente
+que no sea 'empresa', usando el saldo ya actualizado del dia. Un solo Job, un solo cron: no hay
+razon para procesos separados. Idempotente: correrlo dos veces el mismo dia no cambia nada la
+segunda vez -- (1)/(3) porque los recalculos se derivan siempre del estado actual, y (2) porque
+devengar_interes_pasivo se salta cualquier cuenta que ya tenga un asiento 'interes_pasivo' fechado
+ese mismo dia (sin este chequeo, correr el Job dos veces duplicaria el interes del dia).
 
 Uso: python -m app.jobs.cierre_diario [--fecha AAAA-MM-DD]
 --fecha: para simular en local o en tests; por defecto hoy.
@@ -21,7 +23,8 @@ from datetime import date
 from sqlalchemy import select, update
 
 from app.core.db import SessionLocal
-from app.models import AuditLog, Cliente, Cuota, Prestamo
+from app.models import AuditLog, Cliente, Cuenta, Cuota, Prestamo
+from app.services.intereses_pasivos import devengar_interes_pasivo
 from app.services.prestamos import recalcular_mora
 from app.services.segmentacion import reevaluar_segmento
 
@@ -38,7 +41,11 @@ def ejecutar(fecha: date) -> None:
         for prestamo in prestamos_vigentes:
             recalcular_mora(db, prestamo, fecha)
 
-        # Despues de recalcular mora: el ascenso a premium usa el saldo_capital ya actualizado del dia.
+        # Antes de segmentacion: el ascenso a premium debe ver el saldo ya con el interes acreditado.
+        cuentas_ahorro = list(db.scalars(select(Cuenta).where(Cuenta.tipo_cuenta == "ahorro", Cuenta.estado == "activa")))
+        for cuenta in cuentas_ahorro:
+            devengar_interes_pasivo(db, cuenta, fecha)
+
         clientes_reevaluables = list(db.scalars(select(Cliente).where(Cliente.segmento != "empresa")))
         for cliente in clientes_reevaluables:
             reevaluar_segmento(db, cliente, fecha)
@@ -47,6 +54,7 @@ def ejecutar(fecha: date) -> None:
         db.commit()
         print(f"cierre_diario {fecha.isoformat()}: {cuotas_vencidas} cuota(s) marcadas vencidas, "
               f"{len(prestamos_vigentes)} prestamo(s) vigente(s) recalculados, "
+              f"{len(cuentas_ahorro)} cuenta(s) de ahorro evaluadas para interes pasivo, "
               f"{len(clientes_reevaluables)} cliente(s) re-evaluados")
     finally:
         db.close()

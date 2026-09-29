@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +42,14 @@ class Settings(BaseSettings):
     llm_modelo: str = "llama-3.1-8b-instant"
     llm_api_key: str | None = None
     quejas_cuota_diaria: int = 5
+
+    # HU-Gastos-Operativos-Intereses-Pasivos. TEA pasiva deliberadamente baja frente a las TEA
+    # activas de los prestamos (14-22%, ver services/prestamos.py::LIMITES_SEGMENTO): el margen
+    # de intermediacion es la diferencia entre lo que el banco cobra por prestar y paga por captar.
+    tea_pasiva_ahorro: Decimal = Decimal("2.50")
+    # Costo interno (nunca se le cobra al cliente): constante, no una fila de `tarifa` -- con un
+    # solo tipo de costo variable no se justifica una tabla nueva (ver diseño de la HU).
+    costo_interconexion_retiro: Decimal = Decimal("1.20")
 
 
 settings = Settings()

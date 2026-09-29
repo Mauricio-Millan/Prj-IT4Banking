@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
 
 from sqlalchemy import func, or_, select
@@ -18,7 +18,7 @@ class MonedaIncompatible(Exception):
 
 def _registrar_asiento_operacion(
     db: Session, tipo_operacion: str, transaccion_id: int, monto: Decimal, moneda: str,
-    cuenta_cliente_debe: int | None, cuenta_cliente_haber: int | None,
+    cuenta_cliente_debe: int | None, cuenta_cliente_haber: int | None, fecha: date | None = None,
 ) -> None:
     """Arma el asiento de 2 lineas de deposito/retiro/transferencia. La convencion contable
     es fija por tipo:
@@ -53,7 +53,7 @@ def _registrar_asiento_operacion(
             MovimientoContable(cuenta_contable_id=depositos_id, cuenta_cliente_id=cuenta_cliente_haber,
                                 tipo_movimiento="H", importe=monto, moneda=moneda),
         ]
-    registrar_asiento(db, tipo_operacion, transaccion_id, movs)
+    registrar_asiento(db, tipo_operacion, transaccion_id, movs, fecha_contable=fecha)
 
 
 def _resolver_destino(db: Session, valor: str) -> Cuenta | None:
@@ -76,13 +76,21 @@ def retiros_este_mes(db: Session, cuenta_id: int, hoy) -> int:
     )
 
 
-def crear(db: Session, cliente_id: int, usuario_id: int, datos: TransaccionIn, ip: str | None = None) -> dict:
+def crear(
+    db: Session, cliente_id: int, usuario_id: int, datos: TransaccionIn, ip: str | None = None,
+    fecha: date | None = None,
+) -> dict:
     """RF-08: deposito/retiro/transferencia. Atomico: si algo falla antes del commit, nada se
     persiste (ni el UPDATE de saldo, ni la transaccion, ni el asiento, ni la comision).
     canal: 'cajero'/'agente' para deposito/retiro (obligatorio, HU-Tarifario-Comisiones);
-    'web' fijo para transferencia (ver TransaccionIn)."""
+    'web' fijo para transferencia (ver TransaccionIn).
+
+    fecha: None (default) usa la fecha/hora real de ahora -- cualquier operacion real de un
+    cliente. Se pasa explicita solo desde la simulacion historica de scripts/sembrar_datos_prueba.py
+    (HU-Gastos-Operativos-Intereses-Pasivos), para que fecha_hora, el asiento y el calculo de
+    "cuota gratis del mes" de RET-RED usen el dia simulado, no el dia real en que corre el script."""
     origen_id = destino_id = None
-    hoy = datetime.now(timezone.utc).date()
+    hoy = fecha or datetime.now(timezone.utc).date()
     # Datos para cobrar RET-RED, calculados ANTES de insertar la transaccion de este retiro:
     # si se calcularan despues, la cuenta "se contaria a si misma" como uno de los 3 gratis.
     cuenta_para_comision = None
@@ -129,12 +137,14 @@ def crear(db: Session, cliente_id: int, usuario_id: int, datos: TransaccionIn, i
         cuenta_origen_id=origen_id, cuenta_destino_id=destino_id,
         tipo=datos.tipo, monto=datos.monto, canal=(datos.canal or "web"), estado="aplicada",
     )
+    if fecha is not None:
+        transaccion.fecha_hora = datetime.combine(fecha, time.min, tzinfo=timezone.utc)
     db.add(transaccion)
     db.flush()  # obtiene transaccion_id
 
     _registrar_asiento_operacion(
         db, datos.tipo, transaccion.transaccion_id, datos.monto, moneda,
-        cuenta_cliente_debe=origen_id, cuenta_cliente_haber=destino_id,
+        cuenta_cliente_debe=origen_id, cuenta_cliente_haber=destino_id, fecha=fecha,
     )
 
     comision = None
@@ -142,8 +152,14 @@ def crear(db: Session, cliente_id: int, usuario_id: int, datos: TransaccionIn, i
         concepto = f"Comisión: retiro en red aliada ({retiros_previos + 1}.º del mes)"
         mensaje_error = f"Saldo insuficiente para el retiro más la comisión de S/ {tarifa_comision.monto:.2f}"
         comisiones_service.cobrar(db, tarifa_comision, cuenta_para_comision, moneda,
-                                   transaccion.transaccion_id, concepto, mensaje_error)
+                                   transaccion.transaccion_id, concepto, mensaje_error, fecha=fecha)
         comision = {"monto": monto_comision, "concepto": concepto}
+
+    # HU-Gastos-Operativos-Intereses-Pasivos V4: costo interno del banco en todo retiro -- pase
+    # o no la cuota gratuita de RET-RED arriba (canal ya es siempre 'cajero'/'agente' para un
+    # retiro, ver TransaccionIn.canal).
+    if datos.tipo == "retiro":
+        comisiones_service.cobrar_costo_interconexion(db, moneda, fecha=fecha)
 
     db.add(AuditLog(usuario_id=usuario_id, accion="crear", entidad="transaccion",
                      entidad_id=str(transaccion.transaccion_id), ip=ip))

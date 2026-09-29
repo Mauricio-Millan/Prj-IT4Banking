@@ -6,6 +6,7 @@ estas funciones, se forma un ciclo (transacciones cobra RET-RED via comisiones; 
 tambien la necesita para PRE-ATR). Este modulo no importa de ninguno de los tres, asi que
 todos pueden depender de el sin ciclos.
 """
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import insert, select, update
@@ -47,12 +48,20 @@ def cuenta_contable_id(db: Session, codigo: str) -> int:
 
 def registrar_asiento(
     db: Session, tipo_operacion: str, transaccion_id: int | None, movimientos: list[MovimientoContable],
+    fecha_contable: date | None = None,
 ) -> AsientoContable:
     """Generico: N movimientos que suman cero, cualquiera sea la operacion (2 lineas para
-    deposito/retiro/transferencia/desembolso/comision, 3 para pago de cuota)."""
+    deposito/retiro/transferencia/desembolso/comision, 3 para pago de cuota).
+
+    fecha_contable: None (default) deja que el server_default ponga la fecha real de hoy --
+    el caso normal de cualquier operacion en vivo. Se pasa explicita solo para devengos que
+    corren dentro de una simulacion historica (HU-Gastos-Operativos-Intereses-Pasivos), donde
+    cierre_diario procesa un dia pasado y el asiento debe quedar fechado ese dia, no "hoy"."""
     verificar_balance(movimientos)
 
     asiento = AsientoContable(tipo_operacion=tipo_operacion, transaccion_id=transaccion_id, estado="contabilizado")
+    if fecha_contable is not None:
+        asiento.fecha_contable = fecha_contable
     db.add(asiento)
     db.flush()  # asiento_contable no tiene trigger: el OUTPUT normal de SQLAlchemy funciona aqui.
 

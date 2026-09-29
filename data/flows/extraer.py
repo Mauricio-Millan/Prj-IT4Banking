@@ -60,9 +60,17 @@ def extraer_clientes(engine: Engine | None = None) -> pd.DataFrame:
     return pd.read_sql(sql, engine or _engine())
 
 
-def extraer_movimientos_ingreso(fecha: date, engine: Engine | None = None) -> pd.DataFrame:
-    """Solo cuentas de ingreso (4101 comisiones, 4201 intereses): dato crudo para
-    HU-Analitica-DW-PowerBI, sin agregar nada aqui (fuera de alcance de esta HU)."""
+def extraer_movimientos_ingreso_costo(fecha: date, engine: Engine | None = None) -> pd.DataFrame:
+    """Cuentas de ingreso (4101 comisiones, 4201 intereses, HU-Pipeline-ETL) y de gasto (5101
+    interes pasivo, 5201 interconexion, HU-Gastos-Operativos-Intereses-Pasivos): dato crudo para
+    hecho_rentabilidad_mensual en HU-Analitica-DW-PowerBI, sin agregar nada aqui.
+
+    ponytail-bug corregido: esta funcion solo traia 4101/4201 desde que se escribio para la HU
+    del pipeline (antes de que existieran cuentas de gasto); al implementar Gastos-Operativos
+    nadie volvio a tocar la extraccion, asi que 5101/5201 nunca llegaban a silver y el costo de
+    hecho_rentabilidad_mensual quedaba siempre en 0 aunque el OLTP ya tuviera los asientos
+    reales (encontrado verificando el dashboard, no por un test -- no hay test de integracion
+    de este SQL contra un OLTP con datos de gasto reales)."""
     sql = text("""
         SELECT m.movimiento_id, m.asiento_id, m.cuenta_contable_id, m.cuenta_cliente_id,
                m.tipo_movimiento, m.importe, m.moneda, cc.codigo AS codigo_cuenta_contable,
@@ -70,7 +78,7 @@ def extraer_movimientos_ingreso(fecha: date, engine: Engine | None = None) -> pd
         FROM movimiento_contable m
         JOIN cuenta_contable cc ON cc.cuenta_contable_id = m.cuenta_contable_id
         JOIN asiento_contable a ON a.asiento_id = m.asiento_id
-        WHERE cc.codigo IN ('4101', '4201') AND a.fecha_contable = :fecha
+        WHERE cc.codigo IN ('4101', '4201', '5101', '5201') AND a.fecha_contable = :fecha
     """)
     return pd.read_sql(sql, engine or _engine(), params={"fecha": fecha})
 
@@ -83,5 +91,5 @@ def extraer_todo(fecha: date) -> dict[str, pd.DataFrame]:
         "prestamo": extraer_prestamos(engine),
         "cuota": extraer_cuotas(engine),
         "cliente": extraer_clientes(engine),
-        "movimiento_contable": extraer_movimientos_ingreso(fecha, engine),
+        "movimiento_contable": extraer_movimientos_ingreso_costo(fecha, engine),
     }

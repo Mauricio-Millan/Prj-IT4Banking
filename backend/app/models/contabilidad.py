@@ -76,6 +76,8 @@ CODIGO_DEPOSITOS_VISTA = "2101"
 CODIGO_INGRESOS_COMISION = "4101"
 CODIGO_PRESTAMOS_POR_COBRAR = "1301"  # HU-Ciclo-Vida-Prestamo
 CODIGO_INGRESOS_INTERESES = "4201"  # HU-Ciclo-Vida-Prestamo
+CODIGO_GASTO_INTERES_PASIVO = "5101"  # HU-Gastos-Operativos-Intereses-Pasivos
+CODIGO_GASTO_INTERCONEXION = "5201"  # HU-Gastos-Operativos-Intereses-Pasivos
 
 
 def filas_seed_plan_de_cuentas() -> list[dict]:
@@ -87,4 +89,6 @@ def filas_seed_plan_de_cuentas() -> list[dict]:
         {"codigo": CODIGO_INGRESOS_COMISION, "nombre": "Ingresos por comision", "naturaleza": "H", "tipo": "ingreso"},
         {"codigo": CODIGO_PRESTAMOS_POR_COBRAR, "nombre": "Prestamos por cobrar", "naturaleza": "D", "tipo": "activo"},
         {"codigo": CODIGO_INGRESOS_INTERESES, "nombre": "Ingresos por intereses", "naturaleza": "H", "tipo": "ingreso"},
+        {"codigo": CODIGO_GASTO_INTERES_PASIVO, "nombre": "Gastos por intereses pasivos", "naturaleza": "D", "tipo": "gasto"},
+        {"codigo": CODIGO_GASTO_INTERCONEXION, "nombre": "Gastos por interconexion de red", "naturaleza": "D", "tipo": "gasto"},
     ]
