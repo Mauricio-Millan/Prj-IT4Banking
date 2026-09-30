@@ -10,9 +10,10 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.exceptions import SaldoInsuficiente
 from app.models import MovimientoContable, Tarifa, Transaccion
-from app.models.contabilidad import CODIGO_DEPOSITOS_VISTA, CODIGO_INGRESOS_COMISION
+from app.models.contabilidad import CODIGO_CAJA, CODIGO_DEPOSITOS_VISTA, CODIGO_GASTO_INTERCONEXION, CODIGO_INGRESOS_COMISION
 from app.services.contabilidad import cuenta_contable_id, debitar, registrar_asiento
 
 
@@ -51,11 +52,16 @@ def calcular(db: Session, evento: str, cuenta_id: int, fecha: date) -> tuple[Tar
 
 def cobrar(
     db: Session, tarifa: Tarifa, cuenta_id: int, moneda: str, transaccion_origen_id: int, concepto: str,
-    mensaje_error: str | None = None,
+    mensaje_error: str | None = None, fecha: date | None = None,
 ) -> Transaccion:
     """debitar (guardia atomica) + Transaccion(tipo='comision', canal='sistema') + asiento
     DEBE 2101 (cuenta cliente) / HABER 4101. Mismo commit que la operacion que la origino:
-    si la cuenta cubre la operacion pero no la comision, todo se revierte (V3)."""
+    si la cuenta cubre la operacion pero no la comision, todo se revierte (V3).
+
+    fecha: None (default) usa la fecha real de hoy. Se pasa explicita desde
+    services/prestamos.py::pagar_cuota cuando este corre dentro de la simulacion historica del
+    seed (HU-Gastos-Operativos-Intereses-Pasivos), para que la penalidad PRE-ATR quede fechada
+    el mismo dia simulado que la cuota que la origino."""
     try:
         debitar(db, cuenta_id, tarifa.monto)
     except SaldoInsuficiente:
@@ -65,6 +71,8 @@ def cobrar(
         cuenta_origen_id=cuenta_id, tipo="comision", monto=tarifa.monto, canal="sistema",
         estado="aplicada", concepto=concepto, transaccion_origen_id=transaccion_origen_id,
     )
+    if fecha is not None:
+        transaccion.fecha_hora = datetime.combine(fecha, datetime.min.time())
     db.add(transaccion)
     db.flush()
 
@@ -76,5 +84,32 @@ def cobrar(
         MovimientoContable(cuenta_contable_id=ingresos_id, cuenta_cliente_id=None,
                             tipo_movimiento="H", importe=tarifa.monto, moneda=moneda),
     ]
-    registrar_asiento(db, "comision", transaccion.transaccion_id, movs)
+    registrar_asiento(db, "comision", transaccion.transaccion_id, movs, fecha_contable=fecha)
     return transaccion
+
+
+def cobrar_costo_interconexion(db: Session, moneda: str, fecha: date | None = None) -> None:
+    """HU-Gastos-Operativos-Intereses-Pasivos V4/V5: costo interno del banco por cada retiro en
+    cajero/agente -- nunca se le cobra al cliente ni toca su cuenta (2101). Se paga siempre,
+    haya o no comision RET-RED en el mismo retiro (el banco le paga a la red pase o no la cuota
+    gratuita del cliente).
+
+    transaccion_id=None (no el del retiro que lo origino): asiento_contable tiene un indice
+    UNIQUE filtrado (ux_asiento_transaccion_original, HU-Libro-Mayor-Partida-Doble) que permite
+    a lo sumo UN asiento por transaccion_id no nulo -- el propio retiro ya uso ese transaccion_id
+    para su asiento 'retiro'. Reusarlo aqui viola el indice (found real: bloqueaba TODO retiro
+    en Azure real, silencioso en SQLite porque el indice filtrado se agrega a mano en la
+    migracion, no en el modelo, y los tests no lo tienen). Mismo patron que interes_pasivo:
+    asiento interno sin transaccion de cliente."""
+    costo = settings.costo_interconexion_retiro
+    if costo <= 0:
+        return
+    gasto_id = cuenta_contable_id(db, CODIGO_GASTO_INTERCONEXION)
+    caja_id = cuenta_contable_id(db, CODIGO_CAJA)
+    movs = [
+        MovimientoContable(cuenta_contable_id=gasto_id, cuenta_cliente_id=None,
+                            tipo_movimiento="D", importe=costo, moneda=moneda),
+        MovimientoContable(cuenta_contable_id=caja_id, cuenta_cliente_id=None,
+                            tipo_movimiento="H", importe=costo, moneda=moneda),
+    ]
+    registrar_asiento(db, "costo_interconexion", None, movs, fecha_contable=fecha)

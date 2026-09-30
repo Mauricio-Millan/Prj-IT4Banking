@@ -39,6 +39,17 @@ MARIA = {
 def db():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
+    # Indice UNIQUE filtrado real (HU-Libro-Mayor-Partida-Doble): vive solo en la migracion, no
+    # en el modelo (autogenerate no soporta indices filtrados), asi que create_all() no lo trae
+    # solo. Sin esto los tests no detectan un asiento que reutiliza el transaccion_id de otro
+    # (paso exactamente eso en HU-Gastos-Operativos-Intereses-Pasivos: rompia todo retiro en
+    # Azure real y ningun test lo vio hasta correr contra SQL Server real).
+    with engine.connect() as conn:
+        conn.exec_driver_sql(
+            "CREATE UNIQUE INDEX ux_asiento_transaccion_original ON asiento_contable(transaccion_id) "
+            "WHERE transaccion_id IS NOT NULL AND tipo_operacion <> 'reversion'"
+        )
+        conn.commit()
     with sessionmaker(bind=engine)() as s:
         s.add_all(CuentaContable(**fila) for fila in filas_seed_plan_de_cuentas())
         s.add_all(Tarifa(**fila) for fila in filas_seed_tarifario())

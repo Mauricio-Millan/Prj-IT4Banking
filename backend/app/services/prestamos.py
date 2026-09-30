@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, time
 from decimal import ROUND_HALF_UP, Decimal, localcontext
 
 from sqlalchemy import func, select
@@ -70,10 +70,14 @@ def generar_cronograma(monto: Decimal, tasa: Decimal, plazo: int, fecha_desembol
         return filas
 
 
-def desembolsar(db: Session, prestamo: Prestamo, cuenta: Cuenta) -> None:
+def desembolsar(db: Session, prestamo: Prestamo, cuenta: Cuenta, fecha: date | None = None) -> None:
     """V2: desembolso + transaccion + asiento + cronograma en la misma transaccion SQL que
-    quien llama (no hace su propio commit; solicitar()/resolver() lo hacen)."""
-    hoy = date.today()
+    quien llama (no hace su propio commit; solicitar()/resolver() lo hacen).
+
+    fecha: None (default) usa la fecha real de hoy -- el caso de cualquier solicitud real.
+    Se pasa explicita solo desde la simulacion historica de scripts/sembrar_datos_prueba.py,
+    para que el cronograma completo (y no solo el registro) quede fechado en el pasado."""
+    hoy = fecha or date.today()
     prestamo.fecha_desembolso = hoy
 
     acreditar(db, cuenta.cuenta_id, prestamo.monto_original)
@@ -82,6 +86,8 @@ def desembolsar(db: Session, prestamo: Prestamo, cuenta: Cuenta) -> None:
         cuenta_destino_id=cuenta.cuenta_id, tipo="desembolso", monto=prestamo.monto_original,
         canal="sistema", estado="aplicada", concepto=f"Desembolso de préstamo #{prestamo.prestamo_id}",
     )
+    if fecha is not None:
+        transaccion.fecha_hora = datetime.combine(fecha, time.min)
     db.add(transaccion)
     db.flush()
 
@@ -93,7 +99,7 @@ def desembolsar(db: Session, prestamo: Prestamo, cuenta: Cuenta) -> None:
         MovimientoContable(cuenta_contable_id=depositos_id, cuenta_cliente_id=cuenta.cuenta_id,
                             tipo_movimiento="H", importe=prestamo.monto_original, moneda=cuenta.moneda),
     ]
-    registrar_asiento(db, "desembolso", transaccion.transaccion_id, movs)
+    registrar_asiento(db, "desembolso", transaccion.transaccion_id, movs, fecha_contable=fecha)
 
     filas = generar_cronograma(prestamo.monto_original, prestamo.tasa, prestamo.plazo, hoy)
     db.add_all([Cuota(prestamo_id=prestamo.prestamo_id, **fila) for fila in filas])
@@ -115,9 +121,14 @@ def a_schema(p: Prestamo) -> PrestamoOut:
     )
 
 
-def solicitar(db: Session, cliente_id: int, usuario_id: int, datos: SolicitudPrestamoIn, ip: str | None = None) -> Prestamo:
+def solicitar(
+    db: Session, cliente_id: int, usuario_id: int, datos: SolicitudPrestamoIn, ip: str | None = None,
+    fecha: date | None = None,
+) -> Prestamo:
     """RF-06: hibrido. Monto grande -> revision humana en backoffice (como un banco real).
-    Monto dentro del limite del segmento -> decision automatica instantanea, con desembolso."""
+    Monto dentro del limite del segmento -> decision automatica instantanea, con desembolso.
+
+    fecha: ver desembolsar() -- solo la simulacion historica del seed la pasa explicita."""
     cuenta = db.scalar(select(Cuenta).where(Cuenta.cuenta_id == datos.cuenta_id, Cuenta.cliente_id == cliente_id))
     if cuenta is None or cuenta.estado != "activa" or cuenta.moneda != "PEN":
         raise RecursoNoEncontrado()
@@ -144,7 +155,7 @@ def solicitar(db: Session, cliente_id: int, usuario_id: int, datos: SolicitudPre
     db.flush()
 
     if estado == "vigente":
-        desembolsar(db, prestamo, cuenta)
+        desembolsar(db, prestamo, cuenta, fecha=fecha)
 
     db.add(AuditLog(usuario_id=usuario_id, accion="crear", entidad="prestamo", entidad_id=str(prestamo.prestamo_id), ip=ip))
     db.commit()
@@ -180,9 +191,16 @@ def recalcular_mora(db: Session, prestamo: Prestamo, fecha_referencia: date) -> 
     prestamo.bucket_mora = bucket_de(prestamo.dias_mora)
 
 
-def pagar_cuota(db: Session, prestamo_id: int, cliente_id: int, usuario_id: int, cuenta_origen_id: int, ip: str | None = None) -> dict:
+def pagar_cuota(
+    db: Session, prestamo_id: int, cliente_id: int, usuario_id: int, cuenta_origen_id: int, ip: str | None = None,
+    fecha: date | None = None,
+) -> dict:
     """V3: siempre la cuota impaga mas antigua, por su total exacto (mas PRE-ATR si vencida).
-    V4: guardia atomica; si el saldo no alcanza, nada cambia. Todo en un commit."""
+    V4: guardia atomica; si el saldo no alcanza, nada cambia. Todo en un commit.
+
+    fecha: ver desembolsar() -- solo la simulacion historica del seed la pasa explicita, para
+    que "cuota pagada a tiempo/tarde" y la penalidad PRE-ATR se calculen sobre el dia simulado,
+    no sobre la fecha real en que corre el script."""
     prestamo = db.scalar(select(Prestamo).where(Prestamo.prestamo_id == prestamo_id, Prestamo.cliente_id == cliente_id))
     if prestamo is None:
         raise RecursoNoEncontrado()
@@ -202,7 +220,7 @@ def pagar_cuota(db: Session, prestamo_id: int, cliente_id: int, usuario_id: int,
     if cuenta is None:
         raise RecursoNoEncontrado()
 
-    hoy = date.today()
+    hoy = fecha or date.today()
     era_vencida = cuota.estado == "vencida"
 
     debitar(db, cuenta.cuenta_id, cuota.total)
@@ -211,6 +229,8 @@ def pagar_cuota(db: Session, prestamo_id: int, cliente_id: int, usuario_id: int,
         cuenta_origen_id=cuenta.cuenta_id, tipo="pago_prestamo", monto=cuota.total, canal="web",
         estado="aplicada", concepto=f"Pago cuota {cuota.numero}/{prestamo.plazo}",
     )
+    if fecha is not None:
+        transaccion.fecha_hora = datetime.combine(fecha, time.min)
     db.add(transaccion)
     db.flush()
 
@@ -225,7 +245,7 @@ def pagar_cuota(db: Session, prestamo_id: int, cliente_id: int, usuario_id: int,
         MovimientoContable(cuenta_contable_id=intereses_id, cuenta_cliente_id=None,
                             tipo_movimiento="H", importe=cuota.interes, moneda=cuenta.moneda),
     ]
-    registrar_asiento(db, "pago_prestamo", transaccion.transaccion_id, movs)
+    registrar_asiento(db, "pago_prestamo", transaccion.transaccion_id, movs, fecha_contable=fecha)
 
     cuota.estado = "pagada"
     cuota.fecha_pago = hoy
@@ -239,7 +259,8 @@ def pagar_cuota(db: Session, prestamo_id: int, cliente_id: int, usuario_id: int,
         if monto_penalidad > 0:
             concepto = f"Penalidad: cuota {cuota.numero} atrasada {dias_atraso} días"
             mensaje_error = f"Saldo insuficiente para la cuota más la penalidad de S/ {tarifa.monto:.2f}"
-            comisiones_service.cobrar(db, tarifa, cuenta.cuenta_id, cuenta.moneda, transaccion.transaccion_id, concepto, mensaje_error)
+            comisiones_service.cobrar(db, tarifa, cuenta.cuenta_id, cuenta.moneda, transaccion.transaccion_id, concepto,
+                                       mensaje_error, fecha=fecha)
             penalidad = {"monto": monto_penalidad, "concepto": concepto}
 
     recalcular_mora(db, prestamo, hoy)

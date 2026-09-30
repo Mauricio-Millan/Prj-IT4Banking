@@ -20,4 +20,9 @@ COPY sql ./sql
 RUN useradd -r appuser && chown -R appuser /app
 USER appuser
 
+# appuser es un usuario de sistema sin directorio home (useradd -r, sin -m): Prefect por
+# defecto guarda su estado local (servidor efimero, SQLite propio) en ~/.prefect, que no
+# existe/no es escribible. Se apunta a /app, que si tiene los permisos correctos.
+ENV PREFECT_HOME=/app/.prefect
+
 ENTRYPOINT ["python", "-m", "flows.carga_diaria"]

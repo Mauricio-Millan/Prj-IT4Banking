@@ -155,14 +155,20 @@ def listar_clientes_empresa(
 
 @router.get("/quejas", response_model=list[QuejaRevisionOut])
 def listar_quejas(
+    estado: str = Query("pendiente"),
     categoria: str | None = Query(None),
     db: Session = Depends(get_db),
     _=Depends(require_role("analista", "admin")),
     __=Depends(auditar_consulta("cola_quejas")),
 ):
     """V11: cualquier analista/admin ve toda la cola; 'categoria' es un filtro de conveniencia,
-    no una restriccion de acceso (sin RBAC por equipo en esta version — ver nota de alcance de la HU)."""
-    return quejas_service.listar_cola(db, categoria)
+    no una restriccion de acceso (sin RBAC por equipo en esta version — ver nota de alcance de la HU).
+    Extension 2026-09-29 (tablero Kanban): 'estado' default 'pendiente' preserva el comportamiento
+    de siempre; 'todos' trae las tres columnas de una sola vez."""
+    try:
+        return quejas_service.listar_cola(db, estado, categoria)
+    except quejas_service.EstadoInvalido:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Estado de queja inválido")
 
 
 @router.get("/quejas/metricas", response_model=MetricasQuejasOut)

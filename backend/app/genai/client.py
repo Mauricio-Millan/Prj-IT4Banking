@@ -33,14 +33,14 @@ def _completar_falso(prompt: str) -> str:
         "amenaza_escalamiento": any(p in texto for p in ("indecopi", "denuncia", "abogado", "redes sociales", "prensa")),
     }
     if any(p in texto for p in ("no reconozco", "no reconoce", "fraude", "clonada", "suplantacion", "suplantación", "phishing")):
-        categoria, confianza, motivo = "fraude", 0.9, "transaccion no reconocida"
+        categoria, confianza, resumen = "fraude", 0.9, "El cliente reporta una transaccion que no reconoce. Podria tratarse de fraude o uso indebido de sus medios de pago."
     elif any(p in texto for p in ("tarjeta", "cuenta", "prestamo", "préstamo", "cobro", "comision", "comisión", "saldo")):
-        categoria, confianza, motivo = "producto", 0.85, "problema con un producto"
+        categoria, confianza, resumen = "producto", 0.85, "El cliente reporta un problema con un producto (cuenta, tarjeta o prestamo). Pide que se revise y corrija."
     elif any(p in texto for p in ("atencion", "atención", "respondio", "respondió", "app", "canal", "cajero", "tiempo", "lento", "lenta")):
-        categoria, confianza, motivo = "servicio", 0.8, "problema de atencion o canal"
+        categoria, confianza, resumen = "servicio", 0.8, "El cliente reporta un problema de atencion o de un canal digital. Pide una mejor experiencia de servicio."
     else:
-        categoria, confianza, motivo = "otro", 0.5, "no clasificable con certeza"
-    return json.dumps({"categoria": categoria, "confianza": confianza, "motivo": motivo, "senales": senales})
+        categoria, confianza, resumen = "otro", 0.5, "No fue posible clasificar el caso con certeza a partir del texto disponible."
+    return json.dumps({"categoria": categoria, "confianza": confianza, "resumen": resumen, "senales": senales})
 
 
 def _completar_groq(system: str, prompt: str) -> str:

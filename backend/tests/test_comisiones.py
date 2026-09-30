@@ -144,6 +144,55 @@ def test_cuota_al_dia_sin_penalidad(cliente, registrado, db):
     assert db.query(Transaccion).filter_by(tipo="comision").count() == 0
 
 
+def test_costo_interconexion_se_registra_en_todo_retiro_por_cajero(cliente, registrado, db):
+    from app.models.contabilidad import CODIGO_GASTO_INTERCONEXION, CuentaContable
+
+    headers, _, cuenta_id = registrado()
+    numero = db.get(Cuenta, cuenta_id).numero_cuenta
+    _depositar(cliente, headers, numero, "1000.00")
+
+    r = _retirar(cliente, headers, cuenta_id, "100.00")  # primer retiro: RET-RED gratis todavia
+    assert r.status_code == 201, r.text
+    assert r.json()["comision"] is None  # sin comision al cliente
+
+    id_5201 = db.query(CuentaContable.cuenta_contable_id).filter_by(codigo=CODIGO_GASTO_INTERCONEXION).scalar()
+    asiento = db.query(AsientoContable).filter_by(tipo_operacion="costo_interconexion").one()
+    # transaccion_id=None a proposito, no el del retiro: asiento_contable tiene un indice UNIQUE
+    # filtrado (ux_asiento_transaccion_original, HU-Libro-Mayor-Partida-Doble) que permite a lo
+    # sumo un asiento por transaccion_id -- el retiro ya uso el suyo para su propio asiento.
+    # (Ese indice no esta en el modelo, solo en la migracion: por eso SQLite no lo detecta y
+    # esta prueba es la unica red de seguridad hasta correr contra SQL Server real.)
+    assert asiento.transaccion_id is None
+    movs = {(m.tipo_movimiento, m.cuenta_contable_id, m.cuenta_cliente_id) for m in
+            db.query(MovimientoContable).filter_by(asiento_id=asiento.asiento_id)}
+    assert ("D", id_5201, None) in movs
+    # V5: la contrapartida es caja (1101), nunca la cuenta 2101 del cliente.
+    assert all(cuenta_cliente_id is None for (_, _, cuenta_cliente_id) in movs)
+
+
+def test_costo_interconexion_tambien_se_cobra_cuando_hay_comision_ret_red(cliente, registrado, db):
+    headers, _, cuenta_id = registrado()
+    numero = db.get(Cuenta, cuenta_id).numero_cuenta
+    _depositar(cliente, headers, numero, "1000.00")
+    for _ in range(3):
+        _retirar(cliente, headers, cuenta_id, "50.00")  # agota la cuota gratis
+
+    r = _retirar(cliente, headers, cuenta_id, "50.00")  # 4.º retiro: SI cobra RET-RED al cliente
+    assert r.status_code == 201, r.text
+    assert r.json()["comision"] is not None
+
+    assert db.query(AsientoContable).filter_by(tipo_operacion="costo_interconexion").count() == 4
+
+
+def test_costo_interconexion_no_toca_el_saldo_del_cliente(cliente, registrado, db):
+    headers, _, cuenta_id = registrado()
+    numero = db.get(Cuenta, cuenta_id).numero_cuenta
+    _depositar(cliente, headers, numero, "1000.00")
+
+    _retirar(cliente, headers, cuenta_id, "100.00")
+    assert db.get(Cuenta, cuenta_id).saldo == Decimal("900.00")  # sin descuento adicional por el costo interno
+
+
 def test_tarifario_publico_no_expone_tarifa_inactiva(cliente):
     r = cliente.get("/tarifario")
     assert r.status_code == 200

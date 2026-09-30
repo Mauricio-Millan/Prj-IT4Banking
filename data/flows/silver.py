@@ -3,9 +3,10 @@ PII (V2/V10) -- silver es la frontera de confianza, nada despues vuelve a ver un
 import hashlib
 
 import pandas as pd
-from sqlalchemy import Engine, create_engine, text
+from sqlalchemy import Engine, create_engine
 
 from . import config
+from .db import merge
 
 _COLUMNAS = {
     "transaccion": (
@@ -78,30 +79,11 @@ def enmascarar_clientes(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(filas)
 
 
-def _merge(engine: Engine, df: pd.DataFrame, tabla: str, clave: str, columnas: list[str]) -> None:
-    if df.empty:
-        return
-    staging = f"stg_{tabla}"
-    df[columnas].to_sql(staging, engine, schema="silver", if_exists="replace", index=False)
-    set_clause = ", ".join(f"tgt.{c} = src.{c}" for c in columnas if c != clave)
-    insert_cols = ", ".join(columnas)
-    insert_vals = ", ".join(f"src.{c}" for c in columnas)
-    merge_sql = f"""
-        MERGE silver.{tabla} AS tgt
-        USING silver.{staging} AS src ON tgt.{clave} = src.{clave}
-        WHEN MATCHED THEN UPDATE SET {set_clause}
-        WHEN NOT MATCHED THEN INSERT ({insert_cols}) VALUES ({insert_vals});
-    """
-    with engine.begin() as conn:
-        conn.execute(text(merge_sql))
-        conn.execute(text(f"DROP TABLE silver.{staging}"))
-
-
 def cargar_silver(validas: dict[str, pd.DataFrame], engine: Engine | None = None) -> None:
     engine = engine or _engine()
     for tabla in ("transaccion", "cuenta", "prestamo", "cuota", "movimiento_contable"):
         clave, columnas = _COLUMNAS[tabla]
-        _merge(engine, validas[tabla], tabla, clave, columnas)
+        merge(engine, validas[tabla], "silver", tabla, clave, columnas)
 
     clave, columnas = _COLUMNAS["cliente"]
-    _merge(engine, enmascarar_clientes(validas["cliente"]), "cliente", clave, columnas)
+    merge(engine, enmascarar_clientes(validas["cliente"]), "silver", "cliente", clave, columnas)

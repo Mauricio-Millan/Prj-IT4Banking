@@ -33,10 +33,13 @@ class QuejaRevisionOut(BaseModel):
     cliente_nombre: str
     texto: str
     categoria_sugerida: str | None
+    categoria_final: str | None
     confianza: Decimal | None
     motivo: str | None
+    resumen: str | None
     prioridad: Literal["normal", "alta"]
     estado_revision: str
+    revisado_por_email: str | None
     creado_en: datetime
 
     @field_serializer("cliente_documento")
@@ -53,3 +56,4 @@ class MetricasQuejasOut(BaseModel):
     confirmadas: int
     corregidas: int
     porcentaje_acuerdo: float
+    tiempo_promedio_revision_horas: float | None

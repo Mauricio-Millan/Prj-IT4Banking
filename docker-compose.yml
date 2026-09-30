@@ -28,7 +28,8 @@ services:
     entrypoint: >
       bash -c "
       /opt/mssql-tools18/bin/sqlcmd -C -S sqlserver -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"IF DB_ID('bancocloud_dw') IS NULL CREATE DATABASE bancocloud_dw\" &&
-      /opt/mssql-tools18/bin/sqlcmd -C -S sqlserver -U sa -P \"$$MSSQL_SA_PASSWORD\" -d bancocloud_dw -i /sql/ddl_silver.sql
+      /opt/mssql-tools18/bin/sqlcmd -C -S sqlserver -U sa -P \"$$MSSQL_SA_PASSWORD\" -d bancocloud_dw -i /sql/ddl_silver.sql &&
+      /opt/mssql-tools18/bin/sqlcmd -C -S sqlserver -U sa -P \"$$MSSQL_SA_PASSWORD\" -d bancocloud_dw -i /sql/ddl_gold.sql
       "
     environment:
       MSSQL_SA_PASSWORD: "BancoCloud!Local1"

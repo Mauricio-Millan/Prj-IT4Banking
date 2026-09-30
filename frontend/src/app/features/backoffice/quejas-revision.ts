@@ -3,6 +3,8 @@ import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
 export type CategoriaQueja = 'producto' | 'servicio' | 'fraude' | 'otro';
+export type EstadoQueja = 'pendiente' | 'confirmada' | 'corregida';
+export type EstadoQuejaFiltro = 'todos' | EstadoQueja;
 
 export interface QuejaRevisionOut {
   queja_id: number;
@@ -12,10 +14,13 @@ export interface QuejaRevisionOut {
   cliente_nombre: string;
   texto: string;
   categoria_sugerida: CategoriaQueja | null;
+  categoria_final: CategoriaQueja | null;
   confianza: string | null;
   motivo: string | null;
+  resumen: string | null;
   prioridad: 'normal' | 'alta';
-  estado_revision: 'pendiente' | 'confirmada' | 'corregida';
+  estado_revision: EstadoQueja;
+  revisado_por_email: string | null;
   creado_en: string;
 }
 
@@ -24,6 +29,7 @@ export interface MetricasQuejasOut {
   confirmadas: number;
   corregidas: number;
   porcentaje_acuerdo: number;
+  tiempo_promedio_revision_horas: number | null;
 }
 
 export const CATEGORIAS_QUEJA: CategoriaQueja[] = ['producto', 'servicio', 'fraude', 'otro'];
@@ -33,8 +39,8 @@ export const CATEGORIAS_QUEJA: CategoriaQueja[] = ['producto', 'servicio', 'frau
 export class QuejasRevision {
   private readonly http = inject(HttpClient);
 
-  listarCola(categoria?: CategoriaQueja | null) {
-    let params = new HttpParams();
+  listarCola(estado: EstadoQuejaFiltro = 'pendiente', categoria?: CategoriaQueja | null) {
+    let params = new HttpParams().set('estado', estado);
     if (categoria) params = params.set('categoria', categoria);
     return this.http.get<QuejaRevisionOut[]>(`${environment.apiUrl}/backoffice/quejas`, { params });
   }

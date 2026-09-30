@@ -38,6 +38,13 @@ jobs:
     runs-on: [self-hosted, bancocloud]
     environment:
       name: dev
+    # El runner self-hosted corre en Windows: sin esto, "run:" usa PowerShell
+    # por defecto, que no entiende la continuacion de linea "\" (sintaxis
+    # bash) de los comandos de abajo -- causaba "Falta una expresion
+    # despues del operador unario '--'".
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 

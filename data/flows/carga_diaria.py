@@ -1,4 +1,5 @@
-"""Flujo Prefect: OLTP -> Bronze (ADLS/disco) -> validacion (RNF-05) -> Silver (Azure SQL DW).
+"""Flujo Prefect: OLTP -> Bronze (ADLS/disco) -> validacion (RNF-05) -> Silver -> Gold (estrella,
+HU-Analitica-DW-PowerBI), todo en Azure SQL DW.
 Corre despues de app/jobs/cierre_diario.py (backend) para la misma fecha (V7): asi lee
 dias_mora/bucket_mora/segmento ya actualizados del dia, nunca los del dia anterior.
 
@@ -20,7 +21,7 @@ import pandas as pd
 from prefect import flow, task
 from sqlalchemy import create_engine, text
 
-from . import calidad, config, extraer, silver
+from . import analitica, calidad, config, extraer, silver
 
 
 @task(retries=3, retry_delay_seconds=60)
@@ -78,6 +79,13 @@ def cargar_silver_task(validas: dict[str, pd.DataFrame]) -> None:
     silver.cargar_silver(validas)
 
 
+@task
+def construir_gold_task(fecha: date) -> None:
+    """HU-Analitica-DW-PowerBI: mismo Job, misma corrida -- lee exclusivamente silver.*
+    (ya recien cargado arriba), nunca el OLTP ni Bronze (V1 de esa HU)."""
+    analitica.construir_gold(fecha)
+
+
 def _iniciar_corrida(fecha: date) -> str:
     corrida_id = str(uuid.uuid4())
     with create_engine(config.dw_url()).begin() as conn:
@@ -112,6 +120,7 @@ def carga_diaria(fecha: date | None = None) -> None:
         validas, rechazadas = validar_datos(crudo)
         registrar_rechazos(rechazadas, corrida_id, fecha)
         cargar_silver_task(validas)
+        construir_gold_task(fecha)
 
         advertencia = calidad.advertencia_volumen(crudo["transaccion"])
         if advertencia:
