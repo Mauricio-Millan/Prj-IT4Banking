@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # nunca llama a un LLM real (a diferencia de las claves de tarjeta, que si son siempre
     # necesarias porque el cifrado no es opcional).
     llm_provider: str = "falso"
-    llm_modelo: str = "llama-3.1-8b-instant"
+    llm_modelo: str = "openai/gpt-oss-20b"
     llm_api_key: str | None = None
     quejas_cuota_diaria: int = 5
 
