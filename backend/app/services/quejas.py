@@ -57,37 +57,35 @@ def listar(db: Session, cliente_id: int) -> list[Queja]:
     return list(db.scalars(select(Queja).where(Queja.cliente_id == cliente_id).order_by(Queja.creado_en.desc())))
 
 
-def _motivo_de(db: Session, queja_id: int) -> str | None:
-    """'motivo' no es columna de Queja: se reconstruye del genai_log mas reciente de la queja.
-    ponytail: una consulta por fila (N+1); la cola de quejas pendientes es chica, optimizar con
-    un join si algun dia deja de serlo."""
+_DATOS_IA_VACIOS = {
+    "motivo": None, "resumen": None, "modelo_ia": None,
+    "senal_vulnerabilidad": None, "senal_amenaza_escalamiento": None,
+}
+
+
+def _datos_ia_de(db: Session, queja_id: int) -> dict:
+    """Todo lo que no es columna de Queja se reconstruye del genai_log mas reciente de la
+    queja: "motivo" (prompt v1), "resumen" (Extension 2026-09-28, prompt v2), el modelo usado
+    y las señales de riesgo que ya decidieron la 'prioridad' (Extension: detalle de queja en
+    el tablero, para que el analista vea por que el sistema marco alta prioridad/tal confianza).
+    Una sola consulta por fila (ponytail: N+1, la cola de quejas es chica; optimizar con join
+    si algun dia deja de serlo) en vez de una por campo."""
     log = db.scalar(
         select(GenaiLog).where(GenaiLog.caso_uso == "clasificar_queja", GenaiLog.entidad_id == queja_id)
         .order_by(GenaiLog.genai_log_id.desc()).limit(1)
     )
     if log is None:
-        return None
+        return _DATOS_IA_VACIOS
     try:
-        return json.loads(log.respuesta_cruda).get("motivo")
+        datos = json.loads(log.respuesta_cruda)
     except Exception:
-        return None
-
-
-def _resumen_de(db: Session, queja_id: int) -> str | None:
-    """Extension 2026-09-28: mismo patron que _motivo_de, pero para el campo "resumen" del
-    prompt v2 (2-3 oraciones en vez de una frase de 20 palabras). Quejas clasificadas con el
-    prompt v1 (anteriores a esta extension) no tienen "resumen" en su respuesta_cruda -> None,
-    nunca rompe la cola (R5/V del resto de la HU)."""
-    log = db.scalar(
-        select(GenaiLog).where(GenaiLog.caso_uso == "clasificar_queja", GenaiLog.entidad_id == queja_id)
-        .order_by(GenaiLog.genai_log_id.desc()).limit(1)
-    )
-    if log is None:
-        return None
-    try:
-        return json.loads(log.respuesta_cruda).get("resumen")
-    except Exception:
-        return None
+        return {**_DATOS_IA_VACIOS, "modelo_ia": log.modelo}
+    senales = datos.get("senales") or {}
+    return {
+        "motivo": datos.get("motivo"), "resumen": datos.get("resumen"), "modelo_ia": log.modelo,
+        "senal_vulnerabilidad": senales.get("vulnerabilidad") if isinstance(senales, dict) else None,
+        "senal_amenaza_escalamiento": senales.get("amenaza_escalamiento") if isinstance(senales, dict) else None,
+    }
 
 
 def listar_cola(db: Session, estado: str = "pendiente", categoria: str | None = None) -> list[QuejaRevisionOut]:
@@ -110,17 +108,19 @@ def listar_cola(db: Session, estado: str = "pendiente", categoria: str | None = 
         stmt = stmt.where(Queja.categoria_sugerida == categoria)
     stmt = stmt.order_by(case((Queja.prioridad == "alta", 0), else_=1), Queja.creado_en.asc())
 
-    return [
-        QuejaRevisionOut(
+    filas = []
+    for queja, cliente, revisor_email in db.execute(stmt).all():
+        ia = _datos_ia_de(db, queja.queja_id)
+        filas.append(QuejaRevisionOut(
             queja_id=queja.queja_id, cliente_id=cliente.cliente_id, codigo_cliente=cliente.codigo_cliente,
             cliente_documento=cliente.numero_documento, cliente_nombre=f"{cliente.nombres} {cliente.apellidos}",
             texto=queja.texto, categoria_sugerida=queja.categoria_sugerida, categoria_final=queja.categoria_final,
-            confianza=queja.confianza, motivo=_motivo_de(db, queja.queja_id), resumen=_resumen_de(db, queja.queja_id),
+            confianza=queja.confianza, motivo=ia["motivo"], resumen=ia["resumen"],
             prioridad=queja.prioridad, estado_revision=queja.estado_revision, revisado_por_email=revisor_email,
-            creado_en=queja.creado_en,
-        )
-        for queja, cliente, revisor_email in db.execute(stmt).all()
-    ]
+            creado_en=queja.creado_en, revisado_en=queja.revisado_en, modelo_ia=ia["modelo_ia"],
+            senal_vulnerabilidad=ia["senal_vulnerabilidad"], senal_amenaza_escalamiento=ia["senal_amenaza_escalamiento"],
+        ))
+    return filas
 
 
 def revisar(db: Session, queja_id: int, usuario_id: int, categoria_final: str) -> Queja:
@@ -153,10 +153,19 @@ def revisar(db: Session, queja_id: int, usuario_id: int, categoria_final: str) -
 
 
 def metricas(db: Session) -> dict:
+    total_pendientes = db.scalar(select(func.count()).select_from(Queja).where(Queja.estado_revision == "pendiente"))
+    prioridad_alta_pendientes = db.scalar(
+        select(func.count()).select_from(Queja).where(Queja.estado_revision == "pendiente", Queja.prioridad == "alta")
+    )
     total = db.scalar(select(func.count()).select_from(Queja).where(Queja.estado_revision != "pendiente"))
     confirmadas = db.scalar(select(func.count()).select_from(Queja).where(Queja.estado_revision == "confirmada"))
     corregidas = db.scalar(select(func.count()).select_from(Queja).where(Queja.estado_revision == "corregida"))
     porcentaje = round(confirmadas / total * 100, 1) if total else 0.0
+
+    # KPI de la IA (no del proceso humano): confianza promedio de toda queja que si recibio
+    # una sugerencia del modelo, pendiente o revisada.
+    confianzas = db.scalars(select(Queja.confianza).where(Queja.confianza.is_not(None))).all()
+    confianza_promedio = round(float(sum(confianzas) / len(confianzas)) * 100, 1) if confianzas else None
 
     # Extension 2026-09-27 (AHT proxy): promedio calculado en Python, no con DATEDIFF de SQL
     # Server -- evita depender de una funcion que SQLite (usado en los tests) no tiene igual.
@@ -170,6 +179,8 @@ def metricas(db: Session) -> dict:
     )
 
     return {
+        "total_pendientes": total_pendientes, "prioridad_alta_pendientes": prioridad_alta_pendientes,
         "total_revisadas": total, "confirmadas": confirmadas, "corregidas": corregidas,
-        "porcentaje_acuerdo": porcentaje, "tiempo_promedio_revision_horas": tiempo_promedio_revision_horas,
+        "porcentaje_acuerdo": porcentaje, "confianza_promedio": confianza_promedio,
+        "tiempo_promedio_revision_horas": tiempo_promedio_revision_horas,
     }
