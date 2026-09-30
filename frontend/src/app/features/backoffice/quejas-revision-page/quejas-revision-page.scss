@@ -14,6 +14,38 @@
     max-width: 18rem;
   }
 
+  /* Tarjetas KPI: metricas del proceso humano y del modelo, un vistazo antes del tablero */
+  &__kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  &__kpi {
+    display: grid;
+    gap: 0.3rem;
+    padding: 1rem 1.1rem;
+    border-radius: var(--bc-r-lg);
+    background: var(--bc-surface);
+    box-shadow: var(--bc-inset-hi), var(--bc-shadow-float);
+  }
+
+  &__kpi-valor {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--bc-ink);
+  }
+
+  &__kpi-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--bc-ink-3);
+  }
+
   &__estado {
     padding: 2rem 0;
     color: var(--bc-ink-3);
@@ -151,13 +183,66 @@
     display: flex;
     gap: 0.6rem;
 
-    select {
-      flex: 1;
-    }
-
     .bc-btn[disabled] {
       opacity: 0.6;
       cursor: progress;
+    }
+  }
+
+  /* Combo de categoria final: mismo lenguaje visual que .campo (bezel suave, sin borde gris),
+     pero compacto para vivir al lado del boton en una fila. */
+  &__select {
+    flex: 1;
+    position: relative;
+    display: block;
+
+    &::after {
+      content: '▾';
+      position: absolute;
+      right: 0.8rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.7rem;
+      color: var(--bc-ink-3);
+      pointer-events: none;
+    }
+
+    select {
+      width: 100%;
+      appearance: none;
+      padding: 0.6rem 1.9rem 0.6rem 0.9rem;
+      border: 0;
+      border-radius: var(--bc-r-md);
+      background: var(--bc-bg);
+      box-shadow: 0 0 0 1px var(--bc-hairline), var(--bc-inset-hi);
+      font: inherit;
+      font-size: 0.85rem;
+      color: var(--bc-ink);
+      cursor: pointer;
+      transition: box-shadow var(--bc-dur-fast) var(--bc-ease), background var(--bc-dur-fast) var(--bc-ease);
+
+      &:focus {
+        outline: none;
+        background: var(--bc-surface);
+        box-shadow: 0 0 0 2px var(--bc-primary), 0 12px 30px -16px rgb(0 150 63 / 0.5);
+      }
+    }
+  }
+
+  &__ver-detalle {
+    justify-self: start;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bc-primary-deep);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--bc-primary);
+      text-decoration: underline;
     }
   }
 
@@ -177,6 +262,99 @@
     margin: 0;
     color: var(--bc-danger);
     font-size: 0.8rem;
+  }
+
+  /* Modal de detalle: overlay simple, sin libreria (una vista de solo lectura) */
+  &__modal-fondo {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: rgb(15 23 32 / 0.45);
+    z-index: 100;
+  }
+
+  &__modal {
+    width: min(34rem, 100%);
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    border-radius: var(--bc-r-xl);
+    background: var(--bc-surface);
+    box-shadow: var(--bc-shadow-float);
+    display: grid;
+    gap: 1.1rem;
+  }
+
+  &__modal-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  &__modal-cerrar {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--bc-bg);
+    color: var(--bc-ink-2);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--bc-hairline-strong);
+    }
+  }
+
+  &__modal-seccion {
+    display: grid;
+    gap: 0.5rem;
+
+    h3 {
+      margin: 0;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--bc-ink-3);
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--bc-ink-2);
+    }
+  }
+
+  &__modal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.75rem;
+
+    > div {
+      display: grid;
+      gap: 0.15rem;
+    }
+  }
+
+  &__modal-label {
+    font-size: 0.72rem;
+    color: var(--bc-ink-3);
+  }
+
+  &__modal-senales {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    color: var(--bc-ink-2);
   }
 }
 
