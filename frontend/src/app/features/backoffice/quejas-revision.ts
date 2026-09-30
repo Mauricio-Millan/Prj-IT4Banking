@@ -22,13 +22,20 @@ export interface QuejaRevisionOut {
   estado_revision: EstadoQueja;
   revisado_por_email: string | null;
   creado_en: string;
+  revisado_en: string | null;
+  modelo_ia: string | null;
+  senal_vulnerabilidad: boolean | null;
+  senal_amenaza_escalamiento: boolean | null;
 }
 
 export interface MetricasQuejasOut {
+  total_pendientes: number;
+  prioridad_alta_pendientes: number;
   total_revisadas: number;
   confirmadas: number;
   corregidas: number;
   porcentaje_acuerdo: number;
+  confianza_promedio: number | null;
   tiempo_promedio_revision_horas: number | null;
 }
 

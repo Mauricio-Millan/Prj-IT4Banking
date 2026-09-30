@@ -1,16 +1,30 @@
 <header class="qrev__head bc-reveal">
   <span class="bc-eyebrow">Backoffice</span>
   <h1>Tablero de quejas</h1>
-  @if (metricas(); as m) {
-    <p class="qrev__metrica">
-      {{ m.total_revisadas }} revisadas · {{ m.porcentaje_acuerdo }}% de acuerdo con el modelo
-      ({{ m.confirmadas }} confirmadas, {{ m.corregidas }} corregidas)
-      @if (m.tiempo_promedio_revision_horas !== null) {
-        · {{ m.tiempo_promedio_revision_horas }} h promedio hasta revisión
-      }
-    </p>
-  }
 </header>
+
+@if (metricas(); as m) {
+  <div class="qrev__kpis bc-reveal">
+    <div class="qrev__kpi">
+      <span class="qrev__kpi-valor">{{ m.total_pendientes }}</span>
+      <span class="qrev__kpi-label">Pendientes
+        @if (m.prioridad_alta_pendientes > 0) { <span class="bc-tag bc-tag--off">{{ m.prioridad_alta_pendientes }} alta</span> }
+      </span>
+    </div>
+    <div class="qrev__kpi">
+      <span class="qrev__kpi-valor">{{ m.confianza_promedio !== null ? m.confianza_promedio + '%' : '—' }}</span>
+      <span class="qrev__kpi-label">Confianza promedio del modelo</span>
+    </div>
+    <div class="qrev__kpi">
+      <span class="qrev__kpi-valor">{{ m.porcentaje_acuerdo }}%</span>
+      <span class="qrev__kpi-label">Acuerdo humano-modelo ({{ m.confirmadas }} conf. · {{ m.corregidas }} corr.)</span>
+    </div>
+    <div class="qrev__kpi">
+      <span class="qrev__kpi-valor">{{ m.tiempo_promedio_revision_horas ?? '—' }}</span>
+      <span class="qrev__kpi-label">Horas promedio hasta revisión</span>
+    </div>
+  </div>
+}
 
 <div class="qrev__filtro bc-reveal">
   <label class="campo">
@@ -67,11 +81,13 @@
             }
 
             <div class="qrev__decision">
-              <select [ngModel]="seleccion()[q.queja_id]" (ngModelChange)="elegirCategoria(q.queja_id, $event)">
-                @for (c of categorias; track c) {
-                  <option [value]="c">{{ etiquetaCategoria[c] }}</option>
-                }
-              </select>
+              <label class="qrev__select">
+                <select [ngModel]="seleccion()[q.queja_id]" (ngModelChange)="elegirCategoria(q.queja_id, $event)">
+                  @for (c of categorias; track c) {
+                    <option [value]="c">{{ etiquetaCategoria[c] }}</option>
+                  }
+                </select>
+              </label>
               <button type="button" class="bc-btn bc-btn--primary" [disabled]="resolviendo() === q.queja_id"
                       (click)="resolver(q)">
                 {{ resolviendo() === q.queja_id ? 'Guardando…' : etiquetaBoton(q) }}
@@ -81,6 +97,8 @@
             @if (errorFila()?.id === q.queja_id) {
               <p class="qrev__error" role="alert">{{ errorFila()?.mensaje }}</p>
             }
+
+            <button type="button" class="qrev__ver-detalle" (click)="verDetalle(q)">Ver detalle</button>
           </article>
         }
         @if (pendientes().length === 0) {
@@ -101,6 +119,7 @@
               <span class="bc-tag bc-tag--ok">{{ etiquetaCategoria[q.categoria_final!] }}</span>
               @if (q.revisado_por_email) { <span class="qrev__revisor">Revisado por {{ q.revisado_por_email }}</span> }
             </div>
+            <button type="button" class="qrev__ver-detalle" (click)="verDetalle(q)">Ver detalle</button>
           </article>
         }
         @if (confirmadas().length === 0) {
@@ -121,6 +140,7 @@
               <span class="bc-tag bc-tag--warn">{{ etiquetaCategoria[q.categoria_final!] }}</span>
               @if (q.revisado_por_email) { <span class="qrev__revisor">Revisado por {{ q.revisado_por_email }}</span> }
             </div>
+            <button type="button" class="qrev__ver-detalle" (click)="verDetalle(q)">Ver detalle</button>
           </article>
         }
         @if (corregidas().length === 0) {
@@ -128,5 +148,71 @@
         }
       </div>
     </section>
+  </div>
+}
+
+@if (detalle(); as d) {
+  <div class="qrev__modal-fondo" (click)="cerrarDetalle()">
+    <div class="qrev__modal" (click)="$event.stopPropagation()">
+      <header class="qrev__modal-cabecera">
+        <div>
+          <p class="qrev__cliente">{{ d.cliente_nombre }} · {{ d.codigo_cliente }} · {{ d.cliente_documento }}</p>
+          <p class="qrev__fecha">Registrada el {{ d.creado_en | date:'d MMM y, HH:mm' }}</p>
+        </div>
+        <button type="button" class="qrev__modal-cerrar" (click)="cerrarDetalle()" aria-label="Cerrar">×</button>
+      </header>
+
+      <section class="qrev__modal-seccion">
+        <h3>Texto de la queja</h3>
+        <p>{{ d.texto }}</p>
+      </section>
+
+      @if (d.resumen || d.motivo) {
+        <section class="qrev__modal-seccion">
+          <h3>Resumen generado por IA</h3>
+          <p>{{ d.resumen ?? d.motivo }}</p>
+        </section>
+      }
+
+      <section class="qrev__modal-seccion">
+        <h3>Clasificación del modelo</h3>
+        @if (d.categoria_sugerida) {
+          <div class="qrev__modal-grid">
+            <div><span class="qrev__modal-label">Categoría sugerida</span><span>{{ etiquetaCategoria[d.categoria_sugerida] }}</span></div>
+            @if (d.confianza) {
+              <div><span class="qrev__modal-label">Confianza del modelo</span><span>{{ (+d.confianza * 100).toFixed(0) }}%</span></div>
+            }
+            <div><span class="qrev__modal-label">Prioridad asignada</span><span>{{ d.prioridad === 'alta' ? 'Alta' : 'Normal' }}</span></div>
+            @if (d.modelo_ia) {
+              <div><span class="qrev__modal-label">Modelo usado</span><span>{{ d.modelo_ia }}</span></div>
+            }
+          </div>
+          @if (d.senal_vulnerabilidad || d.senal_amenaza_escalamiento) {
+            <p class="qrev__modal-senales">
+              Señales que elevaron la prioridad:
+              @if (d.senal_vulnerabilidad) { <span class="bc-tag bc-tag--off">Cliente vulnerable</span> }
+              @if (d.senal_amenaza_escalamiento) { <span class="bc-tag bc-tag--off">Riesgo de escalamiento</span> }
+            </p>
+          }
+        } @else {
+          <p class="qrev__vacio">El modelo no pudo clasificar esta queja — quedó para triage 100% manual.</p>
+        }
+      </section>
+
+      @if (d.estado_revision !== 'pendiente') {
+        <section class="qrev__modal-seccion">
+          <h3>Decisión del analista</h3>
+          <div class="qrev__modal-grid">
+            <div><span class="qrev__modal-label">Categoría final</span><span>{{ etiquetaCategoria[d.categoria_final!] }}</span></div>
+            @if (d.revisado_por_email) {
+              <div><span class="qrev__modal-label">Revisado por</span><span>{{ d.revisado_por_email }}</span></div>
+            }
+            @if (d.revisado_en) {
+              <div><span class="qrev__modal-label">Revisado el</span><span>{{ d.revisado_en | date:'d MMM y, HH:mm' }}</span></div>
+            }
+          </div>
+        </section>
+      }
+    </div>
   </div>
 }

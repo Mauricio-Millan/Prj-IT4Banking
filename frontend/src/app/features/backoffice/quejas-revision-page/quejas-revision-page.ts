@@ -45,6 +45,7 @@ export class QuejasRevisionPage implements OnInit {
   protected readonly seleccion = signal<Record<number, CategoriaQueja>>({});
   protected readonly resolviendo = signal<number | null>(null);
   protected readonly errorFila = signal<{ id: number; mensaje: string } | null>(null);
+  protected readonly detalle = signal<QuejaRevisionOut | null>(null);
 
   ngOnInit() {
     this.cargar();
@@ -85,6 +86,14 @@ export class QuejasRevisionPage implements OnInit {
   protected etiquetaBoton(queja: QuejaRevisionOut): string {
     const elegida = this.seleccion()[queja.queja_id];
     return elegida === queja.categoria_sugerida ? 'Mover a confirmada' : 'Mover a corregida';
+  }
+
+  protected verDetalle(queja: QuejaRevisionOut) {
+    this.detalle.set(queja);
+  }
+
+  protected cerrarDetalle() {
+    this.detalle.set(null);
   }
 
   protected resolver(queja: QuejaRevisionOut) {

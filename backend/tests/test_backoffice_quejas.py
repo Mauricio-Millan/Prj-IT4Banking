@@ -222,34 +222,34 @@ def test_resumen_de_con_json_valido(db):
     import json as json_module
 
     from app.models import GenaiLog
-    from app.services.quejas import _resumen_de
+    from app.services.quejas import _datos_ia_de
 
     db.add(GenaiLog(caso_uso="clasificar_queja", entidad_id=999, prompt_version="v2", modelo="falso-determinista",
                      prompt_enmascarado="x", respuesta_cruda=json_module.dumps({"categoria": "otro", "confianza": 0.5, "resumen": "Resumen de prueba."})))
     db.commit()
-    assert _resumen_de(db, 999) == "Resumen de prueba."
+    assert _datos_ia_de(db, 999)["resumen"] == "Resumen de prueba."
 
 
 def test_resumen_de_sin_el_campo_no_rompe(db):
     import json as json_module
 
     from app.models import GenaiLog
-    from app.services.quejas import _resumen_de
+    from app.services.quejas import _datos_ia_de
 
     db.add(GenaiLog(caso_uso="clasificar_queja", entidad_id=998, prompt_version="v1", modelo="falso-determinista",
                      prompt_enmascarado="x", respuesta_cruda=json_module.dumps({"categoria": "otro", "confianza": 0.5, "motivo": "viejo"})))
     db.commit()
-    assert _resumen_de(db, 998) is None
+    assert _datos_ia_de(db, 998)["resumen"] is None
 
 
 def test_resumen_de_con_json_malformado_no_rompe(db):
     from app.models import GenaiLog
-    from app.services.quejas import _resumen_de
+    from app.services.quejas import _datos_ia_de
 
     db.add(GenaiLog(caso_uso="clasificar_queja", entidad_id=997, prompt_version="v2", modelo="error",
                      prompt_enmascarado="", respuesta_cruda="esto no es json"))
     db.commit()
-    assert _resumen_de(db, 997) is None
+    assert _datos_ia_de(db, 997)["resumen"] is None
 
 
 def test_resumen_visible_junto_al_texto_completo_en_la_cola(cliente, registrado, token_analista):

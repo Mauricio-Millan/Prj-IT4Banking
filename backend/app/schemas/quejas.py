@@ -41,6 +41,10 @@ class QuejaRevisionOut(BaseModel):
     estado_revision: str
     revisado_por_email: str | None
     creado_en: datetime
+    revisado_en: datetime | None
+    modelo_ia: str | None
+    senal_vulnerabilidad: bool | None
+    senal_amenaza_escalamiento: bool | None
 
     @field_serializer("cliente_documento")
     def _enmascarar_documento(self, v: str) -> str:
@@ -52,8 +56,11 @@ class DecisionQuejaIn(BaseModel):
 
 
 class MetricasQuejasOut(BaseModel):
+    total_pendientes: int
+    prioridad_alta_pendientes: int
     total_revisadas: int
     confirmadas: int
     corregidas: int
     porcentaje_acuerdo: float
+    confianza_promedio: float | None
     tiempo_promedio_revision_horas: float | None
