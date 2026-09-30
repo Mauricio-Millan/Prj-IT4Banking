@@ -16,7 +16,11 @@ from app.genai.client import complete
 from app.models import GenaiLog, Queja
 from app.models.genai import CATEGORIAS_QUEJA
 
-PROMPT_TEMPLATE = (Path(__file__).parent / "prompts" / "clasificar_queja_v1.txt").read_text(encoding="utf-8")
+# Extension 2026-09-28: v2 reemplaza "motivo" (20 palabras) por "resumen" (2-3 oraciones,
+# ~50 palabras) -- v1 queda en Git como historial, no se borra (permite reconstruir/auditar
+# respuestas viejas que ya quedaron guardadas en genai_log con prompt_version="v1").
+PROMPT_VERSION = "v2"
+PROMPT_TEMPLATE = (Path(__file__).parent / "prompts" / "clasificar_queja_v2.txt").read_text(encoding="utf-8")
 SYSTEM_PROMPT = "Eres un clasificador de quejas bancarias. Sigue exactamente el formato de salida solicitado."
 
 
@@ -99,7 +103,7 @@ def clasificar(db: Session, queja: Queja) -> None:
         db.flush()
 
     db.add(GenaiLog(
-        caso_uso="clasificar_queja", entidad_id=queja.queja_id, prompt_version="v1",
+        caso_uso="clasificar_queja", entidad_id=queja.queja_id, prompt_version=PROMPT_VERSION,
         modelo=modelo, prompt_enmascarado=texto_enmascarado if categoria is not None else "",
         respuesta_cruda=respuesta_cruda, latencia_ms=latencia_ms,
     ))

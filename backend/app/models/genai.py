@@ -31,6 +31,8 @@ class Queja(Base):
     categoria_final: Mapped[str | None] = mapped_column(String(20))
     estado_revision: Mapped[str] = mapped_column(String(20), default="pendiente", index=True)
     revisado_por: Mapped[int | None] = mapped_column(ForeignKey("usuario.usuario_id"))
+    # Extension 2026-09-27: proxy de AHT (tiempo hasta revision humana), ver metricas().
+    revisado_en: Mapped[datetime | None] = mapped_column(DateTime)
     # Senales de texto (LLM) + reincidencia (SQL) -> prioridad; nunca un juicio directo del
     # modelo. Orden de la cola: prioridad DESC, creado_en ASC (ver services/quejas.py::listar_cola).
     prioridad: Mapped[str] = mapped_column(String(10), default="normal")

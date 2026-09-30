@@ -182,3 +182,137 @@ def test_analista_no_puede_ver_ni_resolver_sin_rol(cliente, registrado):
     assert cliente.get("/backoffice/quejas", headers=headers).status_code == 403
     assert cliente.patch("/backoffice/quejas/1", headers=headers, json={"categoria_final": "otro"}).status_code == 403
     assert cliente.get("/backoffice/quejas/metricas", headers=headers).status_code == 403
+
+
+# --- Extension 2026-09-27: tiempo hasta revision humana ---
+
+def test_tiempo_promedio_revision_horas_incluye_el_intervalo_real(cliente, registrado, token_analista, db):
+    from datetime import datetime, timedelta
+
+    from app.models import Queja
+
+    headers, _, _ = registrado()
+    r = cliente.post("/quejas", headers=headers, json={"texto": "Queja de prueba con texto suficiente"})
+    queja_id = r.json()["queja_id"]
+    cliente.patch(f"/backoffice/quejas/{queja_id}", headers=token_analista, json={"categoria_final": "otro"})
+
+    # Reescribe las marcas de tiempo a mano para que la revision quede exactamente 3 horas
+    # despues del registro -- reproducible, sin depender de cuanto tarda el test en correr.
+    ahora = datetime.utcnow()
+    db.query(Queja).filter_by(queja_id=queja_id).update({"creado_en": ahora, "revisado_en": ahora + timedelta(hours=3)})
+    db.commit()
+
+    r = cliente.get("/backoffice/quejas/metricas", headers=token_analista)
+    assert r.status_code == 200
+    assert r.json()["tiempo_promedio_revision_horas"] == 3.0
+
+
+def test_tiempo_promedio_revision_es_null_sin_quejas_revisadas(cliente, registrado, token_analista):
+    headers, _, _ = registrado()
+    cliente.post("/quejas", headers=headers, json={"texto": "Queja de prueba con texto suficiente"})  # queda pendiente
+
+    r = cliente.get("/backoffice/quejas/metricas", headers=token_analista)
+    assert r.status_code == 200
+    assert r.json()["tiempo_promedio_revision_horas"] is None
+
+
+# --- Extension 2026-09-28: resumen de traspaso ---
+
+def test_resumen_de_con_json_valido(db):
+    import json as json_module
+
+    from app.models import GenaiLog
+    from app.services.quejas import _resumen_de
+
+    db.add(GenaiLog(caso_uso="clasificar_queja", entidad_id=999, prompt_version="v2", modelo="falso-determinista",
+                     prompt_enmascarado="x", respuesta_cruda=json_module.dumps({"categoria": "otro", "confianza": 0.5, "resumen": "Resumen de prueba."})))
+    db.commit()
+    assert _resumen_de(db, 999) == "Resumen de prueba."
+
+
+def test_resumen_de_sin_el_campo_no_rompe(db):
+    import json as json_module
+
+    from app.models import GenaiLog
+    from app.services.quejas import _resumen_de
+
+    db.add(GenaiLog(caso_uso="clasificar_queja", entidad_id=998, prompt_version="v1", modelo="falso-determinista",
+                     prompt_enmascarado="x", respuesta_cruda=json_module.dumps({"categoria": "otro", "confianza": 0.5, "motivo": "viejo"})))
+    db.commit()
+    assert _resumen_de(db, 998) is None
+
+
+def test_resumen_de_con_json_malformado_no_rompe(db):
+    from app.models import GenaiLog
+    from app.services.quejas import _resumen_de
+
+    db.add(GenaiLog(caso_uso="clasificar_queja", entidad_id=997, prompt_version="v2", modelo="error",
+                     prompt_enmascarado="", respuesta_cruda="esto no es json"))
+    db.commit()
+    assert _resumen_de(db, 997) is None
+
+
+def test_resumen_visible_junto_al_texto_completo_en_la_cola(cliente, registrado, token_analista):
+    headers, _, _ = registrado()
+    cliente.post("/quejas", headers=headers, json={"texto": "Me cobraron una comision que no sabia que existia"})
+
+    r = cliente.get("/backoffice/quejas", headers=token_analista)
+    fila = r.json()[0]
+    assert fila["resumen"] is not None
+    assert fila["texto"] == "Me cobraron una comision que no sabia que existia"  # el resumen no reemplaza el texto
+
+
+# --- Extension 2026-09-29: tablero Kanban por estado ---
+
+def test_get_sin_parametro_estado_sigue_devolviendo_solo_pendientes(cliente, registrado, token_analista):
+    headers, _, _ = registrado()
+    r = cliente.post("/quejas", headers=headers, json={"texto": "Queja de prueba con texto suficiente"})
+    queja_id = r.json()["queja_id"]
+    cliente.patch(f"/backoffice/quejas/{queja_id}", headers=token_analista, json={"categoria_final": "otro"})
+    cliente.post("/quejas", headers=headers, json={"texto": "Otra queja de prueba con texto suficiente"})
+
+    r = cliente.get("/backoffice/quejas", headers=token_analista)
+    assert r.status_code == 200
+    assert all(q["estado_revision"] == "pendiente" for q in r.json())
+    assert len(r.json()) == 1
+
+
+def test_estado_todos_trae_las_tres_columnas(cliente, registrado, token_analista):
+    headers, _, _ = registrado()
+    r1 = cliente.post("/quejas", headers=headers, json={"texto": "Queja de prueba con texto suficiente"})
+    id1 = r1.json()["queja_id"]
+    r2 = cliente.post("/quejas", headers=headers, json={"texto": "Nadie me respondio en la atencion por tres dias"})
+    id2 = r2.json()["queja_id"]
+    cliente.post("/quejas", headers=headers, json={"texto": "Otra queja mas para dejar pendiente en la cola"})
+
+    cliente.patch(f"/backoffice/quejas/{id1}", headers=token_analista, json={"categoria_final": r1.json()["categoria_sugerida"]})
+    cliente.patch(f"/backoffice/quejas/{id2}", headers=token_analista, json={"categoria_final": "fraude"})
+
+    r = cliente.get("/backoffice/quejas?estado=todos", headers=token_analista)
+    assert r.status_code == 200
+    estados = {q["estado_revision"] for q in r.json()}
+    assert estados == {"pendiente", "confirmada", "corregida"}
+    assert len(r.json()) == 3
+
+
+def test_estado_invalido_en_filtro_de_quejas_da_422(cliente, registrado, token_analista):
+    headers, _, _ = registrado()
+    cliente.post("/quejas", headers=headers, json={"texto": "Queja de prueba con texto suficiente"})
+
+    r = cliente.get("/backoffice/quejas?estado=inventado", headers=token_analista)
+    assert r.status_code == 422
+
+
+def test_tarjetas_revisadas_incluyen_categoria_final_y_revisor(cliente, registrado, token_analista):
+    headers, _, _ = registrado()
+    r = cliente.post("/quejas", headers=headers, json={"texto": "Me cobraron una comision que no sabia que existia"})
+    assert r.json()["categoria_sugerida"] == "producto"
+    queja_id = r.json()["queja_id"]
+    cliente.patch(f"/backoffice/quejas/{queja_id}", headers=token_analista, json={"categoria_final": "otro"})
+
+    r = cliente.get("/backoffice/quejas?estado=corregida", headers=token_analista)
+    assert r.status_code == 200
+    fila = r.json()[0]
+    assert fila["queja_id"] == queja_id
+    assert fila["categoria_final"] == "otro"
+    assert fila["revisado_por_email"] == "analista@bancocloud.pe"
