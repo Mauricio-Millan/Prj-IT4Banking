@@ -26,80 +26,123 @@
   </div>
 }
 
-<div class="qrev__filtro bc-reveal">
+<div class="qrev__controles bc-reveal">
   <label class="campo">
-    <span class="campo__label">Filtrar por categoría (opcional)</span>
-    <select [ngModel]="filtroCategoria() ?? ''" (ngModelChange)="aplicarFiltro($event)">
-      <option value="">Todas</option>
-      @for (c of categorias; track c) {
-        <option [value]="c">{{ etiquetaCategoria[c] }}</option>
-      }
+    <span class="campo__label">Agrupar por</span>
+    <select [ngModel]="agrupacion()" (ngModelChange)="agrupacion.set($event)">
+      <option value="estado">Estado</option>
+      <option value="categoria">Categoría</option>
     </select>
   </label>
+
+  @if (agrupacion() === 'estado') {
+    <label class="campo">
+      <span class="campo__label">Filtrar por categoría (opcional)</span>
+      <select [ngModel]="filtroCategoria() ?? ''" (ngModelChange)="aplicarFiltro($event)">
+        <option value="">Todas</option>
+        @for (c of categorias; track c) {
+          <option [value]="c">{{ etiquetaCategoria[c] }}</option>
+        }
+      </select>
+    </label>
+  }
 </div>
+
+<ng-template #tarjeta let-q>
+  <article class="qrev__tarjeta" [class.qrev__tarjeta--alta]="q.prioridad === 'alta'"
+           [class.qrev__tarjeta--resuelta]="q.estado_revision !== 'pendiente'">
+    <header class="qrev__tarjeta-cabecera">
+      <div>
+        <p class="qrev__cliente">{{ q.cliente_nombre }} · {{ q.codigo_cliente }} · {{ q.cliente_documento }}</p>
+        <p class="qrev__fecha">{{ q.creado_en | date:'d MMM y, HH:mm' }}</p>
+      </div>
+      <div class="qrev__insignias">
+        <span class="bc-tag" [class.bc-tag--warn]="q.estado_revision === 'pendiente'"
+              [class.bc-tag--ok]="q.estado_revision === 'confirmada'"
+              [class.bc-tag--off]="q.estado_revision === 'corregida'">
+          {{ q.estado_revision === 'pendiente' ? 'Pendiente' : (q.estado_revision === 'confirmada' ? 'Confirmada' : 'Corregida') }}
+        </span>
+        @if (q.prioridad === 'alta') {
+          <span class="bc-tag bc-tag--off">Prioridad alta</span>
+        }
+      </div>
+    </header>
+
+    <p class="qrev__tipo-legal">{{ q.tipo_legal === 'reclamo' ? 'Reclamo' : 'Queja' }}</p>
+    <p class="qrev__texto">{{ q.texto }}</p>
+
+    @if (q.pedido_consumidor) {
+      <p class="qrev__pedido"><b>Pide:</b> {{ q.pedido_consumidor }}</p>
+    }
+    @if (q.referencia || q.monto_reclamado || q.fecha_incidente) {
+      <p class="qrev__referencia">
+        @if (q.referencia) { <span>{{ q.referencia }}</span> }
+        @if (q.monto_reclamado) { <span>S/ {{ q.monto_reclamado }}</span> }
+        @if (q.fecha_incidente) { <span>{{ q.fecha_incidente | date:'d MMM y' }}</span> }
+      </p>
+    }
+
+    <div class="qrev__sugerencia">
+      @if (q.categoria_sugerida) {
+        <span class="bc-tag bc-tag--warn">Sugerido: {{ etiquetaCategoria[q.categoria_sugerida] }}</span>
+        @if (q.confianza) {
+          <span class="qrev__confianza">
+            <span class="qrev__confianza-barra" [style.width.%]="+q.confianza * 100"></span>
+          </span>
+          <span class="qrev__confianza-texto">{{ (+q.confianza * 100).toFixed(0) }}% confianza</span>
+        }
+      } @else {
+        <span class="bc-tag bc-tag--off">Sin sugerencia del modelo — triage manual</span>
+      }
+    </div>
+    @if (q.resumen) {
+      <p class="qrev__resumen">{{ q.resumen }}</p>
+    } @else if (q.motivo) {
+      <p class="qrev__resumen">{{ q.motivo }}</p>
+    }
+
+    @if (q.estado_revision === 'pendiente') {
+      <div class="qrev__decision">
+        <label class="qrev__select">
+          <select [ngModel]="seleccion()[q.queja_id]" (ngModelChange)="elegirCategoria(q.queja_id, $event)">
+            @for (c of categorias; track c) {
+              <option [value]="c">{{ etiquetaCategoria[c] }}</option>
+            }
+          </select>
+        </label>
+        <button type="button" class="bc-btn bc-btn--primary" [disabled]="resolviendo() === q.queja_id"
+                (click)="resolver(q)">
+          {{ resolviendo() === q.queja_id ? 'Guardando…' : etiquetaBoton(q) }}
+        </button>
+      </div>
+      @if (errorFila()?.id === q.queja_id) {
+        <p class="qrev__error" role="alert">{{ errorFila()?.mensaje }}</p>
+      }
+    } @else {
+      <div class="qrev__resuelta-pie">
+        <span class="bc-tag" [class.bc-tag--ok]="q.estado_revision === 'confirmada'"
+              [class.bc-tag--warn]="q.estado_revision === 'corregida'">
+          {{ etiquetaCategoria[q.categoria_final] }}
+        </span>
+        @if (q.revisado_por_email) { <span class="qrev__revisor">Revisado por {{ q.revisado_por_email }}</span> }
+      </div>
+    }
+
+    <button type="button" class="qrev__ver-detalle" (click)="verDetalle(q)">Ver detalle</button>
+  </article>
+</ng-template>
 
 @if (cargando()) {
   <p class="qrev__estado bc-reveal">Cargando tablero de quejas…</p>
 } @else if (error()) {
   <p class="qrev__estado qrev__estado--error bc-reveal">No pudimos cargar las quejas.</p>
-} @else {
+} @else if (agrupacion() === 'estado') {
   <div class="qrev__tablero bc-reveal">
     <section class="qrev__columna">
       <h2 class="qrev__columna-titulo">Pendiente <span class="qrev__contador">{{ pendientes().length }}</span></h2>
       <div class="qrev__lista">
         @for (q of pendientes(); track q.queja_id) {
-          <article class="qrev__tarjeta" [class.qrev__tarjeta--alta]="q.prioridad === 'alta'">
-            <header class="qrev__tarjeta-cabecera">
-              <div>
-                <p class="qrev__cliente">{{ q.cliente_nombre }} · {{ q.codigo_cliente }} · {{ q.cliente_documento }}</p>
-                <p class="qrev__fecha">{{ q.creado_en | date:'d MMM y, HH:mm' }}</p>
-              </div>
-              @if (q.prioridad === 'alta') {
-                <span class="bc-tag bc-tag--off">Prioridad alta</span>
-              }
-            </header>
-
-            <p class="qrev__texto">{{ q.texto }}</p>
-
-            <div class="qrev__sugerencia">
-              @if (q.categoria_sugerida) {
-                <span class="bc-tag bc-tag--warn">Sugerido: {{ etiquetaCategoria[q.categoria_sugerida] }}</span>
-                @if (q.confianza) {
-                  <span class="qrev__confianza">
-                    <span class="qrev__confianza-barra" [style.width.%]="+q.confianza * 100"></span>
-                  </span>
-                  <span class="qrev__confianza-texto">{{ (+q.confianza * 100).toFixed(0) }}% confianza</span>
-                }
-              } @else {
-                <span class="bc-tag bc-tag--off">Sin sugerencia del modelo — triage manual</span>
-              }
-            </div>
-            @if (q.resumen) {
-              <p class="qrev__resumen">{{ q.resumen }}</p>
-            } @else if (q.motivo) {
-              <p class="qrev__resumen">{{ q.motivo }}</p>
-            }
-
-            <div class="qrev__decision">
-              <label class="qrev__select">
-                <select [ngModel]="seleccion()[q.queja_id]" (ngModelChange)="elegirCategoria(q.queja_id, $event)">
-                  @for (c of categorias; track c) {
-                    <option [value]="c">{{ etiquetaCategoria[c] }}</option>
-                  }
-                </select>
-              </label>
-              <button type="button" class="bc-btn bc-btn--primary" [disabled]="resolviendo() === q.queja_id"
-                      (click)="resolver(q)">
-                {{ resolviendo() === q.queja_id ? 'Guardando…' : etiquetaBoton(q) }}
-              </button>
-            </div>
-
-            @if (errorFila()?.id === q.queja_id) {
-              <p class="qrev__error" role="alert">{{ errorFila()?.mensaje }}</p>
-            }
-
-            <button type="button" class="qrev__ver-detalle" (click)="verDetalle(q)">Ver detalle</button>
-          </article>
+          <ng-container [ngTemplateOutlet]="tarjeta" [ngTemplateOutletContext]="{ $implicit: q }" />
         }
         @if (pendientes().length === 0) {
           <p class="qrev__vacio">Sin quejas pendientes.</p>
@@ -111,16 +154,7 @@
       <h2 class="qrev__columna-titulo">Confirmada <span class="qrev__contador">{{ confirmadas().length }}</span></h2>
       <div class="qrev__lista">
         @for (q of confirmadas(); track q.queja_id) {
-          <article class="qrev__tarjeta qrev__tarjeta--resuelta">
-            <p class="qrev__cliente">{{ q.cliente_nombre }} · {{ q.codigo_cliente }}</p>
-            <p class="qrev__texto">{{ q.texto }}</p>
-            @if (q.resumen) { <p class="qrev__resumen">{{ q.resumen }}</p> }
-            <div class="qrev__resuelta-pie">
-              <span class="bc-tag bc-tag--ok">{{ etiquetaCategoria[q.categoria_final!] }}</span>
-              @if (q.revisado_por_email) { <span class="qrev__revisor">Revisado por {{ q.revisado_por_email }}</span> }
-            </div>
-            <button type="button" class="qrev__ver-detalle" (click)="verDetalle(q)">Ver detalle</button>
-          </article>
+          <ng-container [ngTemplateOutlet]="tarjeta" [ngTemplateOutletContext]="{ $implicit: q }" />
         }
         @if (confirmadas().length === 0) {
           <p class="qrev__vacio">Aún nada confirmado.</p>
@@ -132,19 +166,72 @@
       <h2 class="qrev__columna-titulo">Corregida <span class="qrev__contador">{{ corregidas().length }}</span></h2>
       <div class="qrev__lista">
         @for (q of corregidas(); track q.queja_id) {
-          <article class="qrev__tarjeta qrev__tarjeta--resuelta">
-            <p class="qrev__cliente">{{ q.cliente_nombre }} · {{ q.codigo_cliente }}</p>
-            <p class="qrev__texto">{{ q.texto }}</p>
-            @if (q.resumen) { <p class="qrev__resumen">{{ q.resumen }}</p> }
-            <div class="qrev__resuelta-pie">
-              <span class="bc-tag bc-tag--warn">{{ etiquetaCategoria[q.categoria_final!] }}</span>
-              @if (q.revisado_por_email) { <span class="qrev__revisor">Revisado por {{ q.revisado_por_email }}</span> }
-            </div>
-            <button type="button" class="qrev__ver-detalle" (click)="verDetalle(q)">Ver detalle</button>
-          </article>
+          <ng-container [ngTemplateOutlet]="tarjeta" [ngTemplateOutletContext]="{ $implicit: q }" />
         }
         @if (corregidas().length === 0) {
           <p class="qrev__vacio">Aún nada corregido.</p>
+        }
+      </div>
+    </section>
+  </div>
+} @else {
+  <div class="qrev__tablero qrev__tablero--categoria bc-reveal">
+    <section class="qrev__columna">
+      <h2 class="qrev__columna-titulo">Producto <span class="qrev__contador">{{ porCategoria().producto.length }}</span></h2>
+      <div class="qrev__lista">
+        @for (q of porCategoria().producto; track q.queja_id) {
+          <ng-container [ngTemplateOutlet]="tarjeta" [ngTemplateOutletContext]="{ $implicit: q }" />
+        }
+        @if (porCategoria().producto.length === 0) {
+          <p class="qrev__vacio">Sin quejas en esta categoría.</p>
+        }
+      </div>
+    </section>
+
+    <section class="qrev__columna">
+      <h2 class="qrev__columna-titulo">Servicio <span class="qrev__contador">{{ porCategoria().servicio.length }}</span></h2>
+      <div class="qrev__lista">
+        @for (q of porCategoria().servicio; track q.queja_id) {
+          <ng-container [ngTemplateOutlet]="tarjeta" [ngTemplateOutletContext]="{ $implicit: q }" />
+        }
+        @if (porCategoria().servicio.length === 0) {
+          <p class="qrev__vacio">Sin quejas en esta categoría.</p>
+        }
+      </div>
+    </section>
+
+    <section class="qrev__columna">
+      <h2 class="qrev__columna-titulo">Fraude <span class="qrev__contador">{{ porCategoria().fraude.length }}</span></h2>
+      <div class="qrev__lista">
+        @for (q of porCategoria().fraude; track q.queja_id) {
+          <ng-container [ngTemplateOutlet]="tarjeta" [ngTemplateOutletContext]="{ $implicit: q }" />
+        }
+        @if (porCategoria().fraude.length === 0) {
+          <p class="qrev__vacio">Sin quejas en esta categoría.</p>
+        }
+      </div>
+    </section>
+
+    <section class="qrev__columna">
+      <h2 class="qrev__columna-titulo">Otro <span class="qrev__contador">{{ porCategoria().otro.length }}</span></h2>
+      <div class="qrev__lista">
+        @for (q of porCategoria().otro; track q.queja_id) {
+          <ng-container [ngTemplateOutlet]="tarjeta" [ngTemplateOutletContext]="{ $implicit: q }" />
+        }
+        @if (porCategoria().otro.length === 0) {
+          <p class="qrev__vacio">Sin quejas en esta categoría.</p>
+        }
+      </div>
+    </section>
+
+    <section class="qrev__columna">
+      <h2 class="qrev__columna-titulo">Sin clasificar <span class="qrev__contador">{{ porCategoria().sin_clasificar.length }}</span></h2>
+      <div class="qrev__lista">
+        @for (q of porCategoria().sin_clasificar; track q.queja_id) {
+          <ng-container [ngTemplateOutlet]="tarjeta" [ngTemplateOutletContext]="{ $implicit: q }" />
+        }
+        @if (porCategoria().sin_clasificar.length === 0) {
+          <p class="qrev__vacio">Sin quejas en esta categoría.</p>
         }
       </div>
     </section>
@@ -163,9 +250,29 @@
       </header>
 
       <section class="qrev__modal-seccion">
-        <h3>Texto de la queja</h3>
+        <h3>{{ d.tipo_legal === 'reclamo' ? 'Reclamo' : 'Queja' }}</h3>
         <p>{{ d.texto }}</p>
       </section>
+
+      @if (d.pedido_consumidor || d.monto_reclamado || d.fecha_incidente || d.referencia) {
+        <section class="qrev__modal-seccion">
+          <h3>Detalle del caso</h3>
+          <div class="qrev__modal-grid">
+            @if (d.pedido_consumidor) {
+              <div><span class="qrev__modal-label">Pide</span><span>{{ d.pedido_consumidor }}</span></div>
+            }
+            @if (d.monto_reclamado) {
+              <div><span class="qrev__modal-label">Monto reclamado</span><span>S/ {{ d.monto_reclamado }}</span></div>
+            }
+            @if (d.fecha_incidente) {
+              <div><span class="qrev__modal-label">Fecha del incidente</span><span>{{ d.fecha_incidente | date:'d MMM y' }}</span></div>
+            }
+            @if (d.referencia) {
+              <div><span class="qrev__modal-label">Referencia</span><span>{{ d.referencia }}</span></div>
+            }
+          </div>
+        </section>
+      }
 
       @if (d.resumen || d.motivo) {
         <section class="qrev__modal-seccion">

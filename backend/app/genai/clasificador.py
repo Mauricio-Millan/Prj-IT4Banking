@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.genai import masking
 from app.genai.client import complete
-from app.models import GenaiLog, Queja
+from app.models import Cuenta, GenaiLog, Prestamo, Queja, Tarjeta, Transaccion
 from app.models.genai import CATEGORIAS_QUEJA
 
 # Extension 2026-09-28: v2 reemplaza "motivo" (20 palabras) por "resumen" (2-3 oraciones,
@@ -80,6 +80,29 @@ def _es_reincidente(db: Session, cliente_id: int, categoria: str, queja_id_actua
     ) is not None
 
 
+def _contexto_referencia(db: Session, queja: Queja) -> str:
+    """Extension 2026-10-02: si la queja referencia una operacion/producto propio, se lo
+    describe al modelo en una linea -- nunca mas de lo que ya es visible en otra parte del
+    sistema (ultimos_4 de la tarjeta, numero de cuenta, montos). Vacio si no hay referencia."""
+    if queja.tarjeta_id is not None:
+        t = db.get(Tarjeta, queja.tarjeta_id)
+        if t:
+            return f"Contexto adicional: el cliente referencia su tarjeta terminada en {t.ultimos_4}.\n\n"
+    if queja.cuenta_id is not None:
+        c = db.get(Cuenta, queja.cuenta_id)
+        if c:
+            return f"Contexto adicional: el cliente referencia su cuenta terminada en {c.numero_cuenta[-4:]}.\n\n"
+    if queja.prestamo_id is not None:
+        p = db.get(Prestamo, queja.prestamo_id)
+        if p:
+            return f"Contexto adicional: el cliente referencia un préstamo por S/ {p.monto_original:.2f}.\n\n"
+    if queja.transaccion_id is not None:
+        tr = db.get(Transaccion, queja.transaccion_id)
+        if tr:
+            return f"Contexto adicional: el cliente referencia una transacción de tipo {tr.tipo} por S/ {tr.monto:.2f}.\n\n"
+    return ""
+
+
 def clasificar(db: Session, queja: Queja) -> None:
     """Best-effort (R8): si falla cualquier paso, la queja queda tal cual (pendiente, sin
     sugerencia). Commit propio, separado del INSERT de la queja: un fallo aqui nunca revierte
@@ -88,7 +111,10 @@ def clasificar(db: Session, queja: Queja) -> None:
     texto_enmascarado = ""
     try:
         texto_enmascarado = masking.enmascarar(queja.texto)
-        prompt = PROMPT_TEMPLATE.replace("{texto_enmascarado}", texto_enmascarado)
+        contexto_adicional = _contexto_referencia(db, queja)
+        prompt = (PROMPT_TEMPLATE
+                  .replace("{texto_enmascarado}", texto_enmascarado)
+                  .replace("{contexto_adicional}", contexto_adicional))
         respuesta_cruda, modelo = complete(system=SYSTEM_PROMPT, prompt=prompt)
         categoria, confianza, senales = _validar_salida(respuesta_cruda)
     except Exception:

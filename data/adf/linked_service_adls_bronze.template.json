@@ -1,0 +1,10 @@
+{
+  "type": "AzureBlobFS",
+  "typeProperties": {
+    "url": "https://stbancocloudbronze.dfs.core.windows.net",
+    "accountKey": {
+      "type": "SecureString",
+      "value": "<STORAGE_ACCOUNT_KEY>"
+    }
+  }
+}

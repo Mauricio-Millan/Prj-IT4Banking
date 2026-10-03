@@ -9,9 +9,15 @@
     color: var(--bc-ink-3);
   }
 
-  &__filtro {
+  &__controles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
     margin-bottom: 1.5rem;
-    max-width: 18rem;
+
+    .campo {
+      max-width: 18rem;
+    }
   }
 
   /* Tarjetas KPI: metricas del proceso humano y del modelo, un vistazo antes del tablero */
@@ -55,12 +61,17 @@
     }
   }
 
-  /* Tablero: 3 columnas, sin drag-and-drop */
+  /* Tablero: 3 columnas por estado, sin drag-and-drop */
   &__tablero {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.25rem;
     align-items: start;
+
+    /* Extension 2026-10-02: segundo modo de agrupacion, 5 columnas por categoria */
+    &--categoria {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
   }
 
   &__columna {
@@ -125,6 +136,42 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
+  }
+
+  &__insignias {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+  }
+
+  &__tipo-legal {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--bc-ink-3);
+  }
+
+  &__pedido {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--bc-ink-2);
+  }
+
+  &__referencia {
+    margin: 0;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--bc-ink-3);
+
+    span:not(:last-child)::after {
+      content: '·';
+      margin-left: 0.5rem;
+    }
   }
 
   &__cliente {
@@ -364,6 +411,12 @@
     flex-wrap: wrap;
     font-size: 0.8rem;
     color: var(--bc-ink-2);
+  }
+}
+
+@media (max-width: 1300px) {
+  .qrev__tablero--categoria {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

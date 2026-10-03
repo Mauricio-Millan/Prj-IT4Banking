@@ -1,0 +1,275 @@
+{
+  "activities": [
+    {
+      "name": "Copiar_transaccion_a_silver",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "ParquetSource",
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings"
+          }
+        },
+        "sink": {
+          "type": "AzureSqlSink",
+          "writeBehavior": "upsert",
+          "upsertSettings": {
+            "useTempDB": true,
+            "keys": [
+              "transaccion_id"
+            ]
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "transaccion",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_dw_table",
+          "type": "DatasetReference",
+          "parameters": {
+            "esquema": "silver",
+            "tabla": "transaccion"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_cuenta_a_silver",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "ParquetSource",
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings"
+          }
+        },
+        "sink": {
+          "type": "AzureSqlSink",
+          "writeBehavior": "upsert",
+          "upsertSettings": {
+            "useTempDB": true,
+            "keys": [
+              "cuenta_id"
+            ]
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "cuenta",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_dw_table",
+          "type": "DatasetReference",
+          "parameters": {
+            "esquema": "silver",
+            "tabla": "cuenta"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_prestamo_a_silver",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "ParquetSource",
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings"
+          }
+        },
+        "sink": {
+          "type": "AzureSqlSink",
+          "writeBehavior": "upsert",
+          "upsertSettings": {
+            "useTempDB": true,
+            "keys": [
+              "prestamo_id"
+            ]
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "prestamo",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_dw_table",
+          "type": "DatasetReference",
+          "parameters": {
+            "esquema": "silver",
+            "tabla": "prestamo"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_cuota_a_silver",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "ParquetSource",
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings"
+          }
+        },
+        "sink": {
+          "type": "AzureSqlSink",
+          "writeBehavior": "upsert",
+          "upsertSettings": {
+            "useTempDB": true,
+            "keys": [
+              "cuota_id"
+            ]
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "cuota",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_dw_table",
+          "type": "DatasetReference",
+          "parameters": {
+            "esquema": "silver",
+            "tabla": "cuota"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_movimiento_contable_a_silver",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "ParquetSource",
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings"
+          }
+        },
+        "sink": {
+          "type": "AzureSqlSink",
+          "writeBehavior": "upsert",
+          "upsertSettings": {
+            "useTempDB": true,
+            "keys": [
+              "movimiento_id"
+            ]
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "movimiento_contable",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_dw_table",
+          "type": "DatasetReference",
+          "parameters": {
+            "esquema": "silver",
+            "tabla": "movimiento_contable"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_cliente_a_staging",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "ParquetSource",
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings"
+          }
+        },
+        "sink": {
+          "type": "AzureSqlSink",
+          "writeBehavior": "insert",
+          "preCopyScript": "TRUNCATE TABLE stg.cliente_bronze"
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "cliente",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_dw_table",
+          "type": "DatasetReference",
+          "parameters": {
+            "esquema": "stg",
+            "tabla": "cliente_bronze"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enmascarar_y_cargar_cliente",
+      "type": "SqlServerStoredProcedure",
+      "linkedServiceName": {
+        "referenceName": "ls_dw_sql",
+        "type": "LinkedServiceReference"
+      },
+      "typeProperties": {
+        "storedProcedureName": "silver.sp_cargar_cliente"
+      },
+      "dependsOn": [
+        {
+          "activity": "Copiar_cliente_a_staging",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ]
+    }
+  ],
+  "parameters": {
+    "fecha": {
+      "type": "string"
+    }
+  }
+}

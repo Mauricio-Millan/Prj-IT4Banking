@@ -1,0 +1,207 @@
+{
+  "activities": [
+    {
+      "name": "Copiar_transaccion",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "AzureSqlSource",
+          "sqlReaderQuery": {
+            "value": "@concat('SELECT transaccion_id, cuenta_origen_id, cuenta_destino_id, fecha_hora, tipo, monto, canal, estado, concepto, transaccion_origen_id FROM transaccion WHERE fecha_hora >= ''', pipeline().parameters.fecha, ''' AND fecha_hora < DATEADD(day,1,''', pipeline().parameters.fecha, ''')')",
+            "type": "Expression"
+          }
+        },
+        "sink": {
+          "type": "ParquetSink",
+          "storeSettings": {
+            "type": "AzureBlobFSWriteSettings"
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_oltp_query",
+          "type": "DatasetReference"
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "transaccion",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_cuenta",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "AzureSqlSource",
+          "sqlReaderQuery": "SELECT cuenta_id, cliente_id, numero_cuenta, cci, tipo_cuenta, moneda, saldo, fecha_apertura, estado FROM cuenta"
+        },
+        "sink": {
+          "type": "ParquetSink",
+          "storeSettings": {
+            "type": "AzureBlobFSWriteSettings"
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_oltp_query",
+          "type": "DatasetReference"
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "cuenta",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_prestamo",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "AzureSqlSource",
+          "sqlReaderQuery": "SELECT prestamo_id, cliente_id, cuenta_desembolso_id, monto_original, saldo_capital, tasa, plazo, fecha_desembolso, dias_mora, bucket_mora, estado FROM prestamo"
+        },
+        "sink": {
+          "type": "ParquetSink",
+          "storeSettings": {
+            "type": "AzureBlobFSWriteSettings"
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_oltp_query",
+          "type": "DatasetReference"
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "prestamo",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_cuota",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "AzureSqlSource",
+          "sqlReaderQuery": "SELECT cuota_id, prestamo_id, numero, fecha_vencimiento, capital, interes, total, saldo_capital_despues, estado, fecha_pago, transaccion_id FROM cuota"
+        },
+        "sink": {
+          "type": "ParquetSink",
+          "storeSettings": {
+            "type": "AzureBlobFSWriteSettings"
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_oltp_query",
+          "type": "DatasetReference"
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "cuota",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_cliente",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "AzureSqlSource",
+          "sqlReaderQuery": "SELECT cliente_id, codigo_cliente, tipo_documento, numero_documento, razon_social, nombres, apellidos, region, segmento, fecha_alta, estado FROM cliente"
+        },
+        "sink": {
+          "type": "ParquetSink",
+          "storeSettings": {
+            "type": "AzureBlobFSWriteSettings"
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_oltp_query",
+          "type": "DatasetReference"
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "cliente",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copiar_movimiento_contable",
+      "type": "Copy",
+      "typeProperties": {
+        "source": {
+          "type": "AzureSqlSource",
+          "sqlReaderQuery": {
+            "value": "@concat('SELECT m.movimiento_id, m.asiento_id, m.cuenta_contable_id, m.cuenta_cliente_id, m.tipo_movimiento, m.importe, m.moneda, cc.codigo AS codigo_cuenta_contable, a.fecha_contable, a.tipo_operacion, a.transaccion_id FROM movimiento_contable m JOIN cuenta_contable cc ON cc.cuenta_contable_id = m.cuenta_contable_id JOIN asiento_contable a ON a.asiento_id = m.asiento_id WHERE cc.codigo IN (''4101'',''4201'',''5101'',''5201'') AND a.fecha_contable = ''', pipeline().parameters.fecha, '''')",
+            "type": "Expression"
+          }
+        },
+        "sink": {
+          "type": "ParquetSink",
+          "storeSettings": {
+            "type": "AzureBlobFSWriteSettings"
+          }
+        }
+      },
+      "inputs": [
+        {
+          "referenceName": "ds_oltp_query",
+          "type": "DatasetReference"
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "ds_bronze_parquet",
+          "type": "DatasetReference",
+          "parameters": {
+            "tabla": "movimiento_contable",
+            "fecha": "@pipeline().parameters.fecha"
+          }
+        }
+      ]
+    }
+  ],
+  "parameters": {
+    "fecha": {
+      "type": "string"
+    }
+  }
+}

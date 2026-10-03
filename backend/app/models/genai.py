@@ -1,7 +1,7 @@
-﻿from datetime import datetime
+﻿from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -21,6 +21,7 @@ class Queja(Base):
         CheckConstraint(f"categoria_final IS NULL OR categoria_final IN ({_CATS_SQL})", name="ck_queja_cat_final"),
         CheckConstraint("estado_revision IN ('pendiente','confirmada','corregida')", name="ck_queja_estado_revision"),
         CheckConstraint("prioridad IN ('normal','alta')", name="ck_queja_prioridad"),
+        CheckConstraint("tipo_legal IN ('reclamo','queja')", name="ck_queja_tipo_legal"),
     )
 
     queja_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -37,6 +38,18 @@ class Queja(Base):
     # modelo. Orden de la cola: prioridad DESC, creado_en ASC (ver services/quejas.py::listar_cola).
     prioridad: Mapped[str] = mapped_column(String(10), default="normal")
     creado_en: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    # Extension 2026-10-02: formulario de queja al nivel del Libro de Reclamaciones (D.S. N°
+    # 011-2011-PCM). Todas nullable salvo tipo_legal -- adjuntar evidencia queda fuera de alcance
+    # (ver HU). A lo sumo una referencia a la vez (model_validator en QuejaIn).
+    tipo_legal: Mapped[str] = mapped_column(String(10), default="reclamo")
+    pedido_consumidor: Mapped[str | None] = mapped_column(String(500))
+    monto_reclamado: Mapped[Decimal | None] = mapped_column(Numeric(18, 2))
+    fecha_incidente: Mapped[date | None] = mapped_column(Date)
+    cuenta_id: Mapped[int | None] = mapped_column(ForeignKey("cuenta.cuenta_id"))
+    tarjeta_id: Mapped[int | None] = mapped_column(ForeignKey("tarjeta.tarjeta_id"))
+    prestamo_id: Mapped[int | None] = mapped_column(ForeignKey("prestamo.prestamo_id"))
+    transaccion_id: Mapped[int | None] = mapped_column(ForeignKey("transaccion.transaccion_id"))
 
 
 class ResumenEjecutivo(Base):

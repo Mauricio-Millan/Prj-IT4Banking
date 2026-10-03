@@ -1,0 +1,22 @@
+{
+  "type": "ScheduleTrigger",
+  "typeProperties": {
+    "recurrence": {
+      "frequency": "Day",
+      "interval": 1,
+      "startTime": "2026-10-03T02:00:00Z",
+      "timeZone": "UTC"
+    }
+  },
+  "pipelines": [
+    {
+      "pipelineReference": {
+        "referenceName": "pl_carga_bronze",
+        "type": "PipelineReference"
+      },
+      "parameters": {
+        "fecha": "@formatDateTime(adddays(trigger().scheduledTime, -1), 'yyyy-MM-dd')"
+      }
+    }
+  ]
+}

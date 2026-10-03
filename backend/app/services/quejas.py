@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, aliased
 from app.core.config import settings
 from app.core.exceptions import RecursoNoEncontrado
 from app.genai import clasificador
-from app.models import Cliente, GenaiLog, Queja, Usuario
+from app.models import Cliente, Cuenta, GenaiLog, Prestamo, Queja, Tarjeta, Transaccion, Usuario
 from app.schemas.quejas import QuejaIn, QuejaRevisionOut
 
 
@@ -37,13 +37,57 @@ def _quejas_creadas_hoy(db: Session, cliente_id: int) -> int:
     )
 
 
+def _validar_referencia_propia(db: Session, cliente_id: int, datos: QuejaIn) -> None:
+    """Extension 2026-10-02: si la queja referencia una operacion/producto, debe ser del propio
+    cliente. Mismo criterio RNF-09 de siempre: 404 tanto si no existe como si es de otro cliente
+    (nunca se distingue, para no filtrar informacion de a quien pertenece)."""
+    if datos.cuenta_id is not None:
+        existe = db.scalar(select(Cuenta.cuenta_id).where(
+            Cuenta.cuenta_id == datos.cuenta_id, Cuenta.cliente_id == cliente_id,
+        ))
+        if existe is None:
+            raise RecursoNoEncontrado()
+    if datos.tarjeta_id is not None:
+        existe = db.scalar(
+            select(Tarjeta.tarjeta_id).join(Cuenta, Tarjeta.cuenta_id == Cuenta.cuenta_id)
+            .where(Tarjeta.tarjeta_id == datos.tarjeta_id, Cuenta.cliente_id == cliente_id)
+        )
+        if existe is None:
+            raise RecursoNoEncontrado()
+    if datos.prestamo_id is not None:
+        existe = db.scalar(select(Prestamo.prestamo_id).where(
+            Prestamo.prestamo_id == datos.prestamo_id, Prestamo.cliente_id == cliente_id,
+        ))
+        if existe is None:
+            raise RecursoNoEncontrado()
+    if datos.transaccion_id is not None:
+        OrigenCuenta, DestinoCuenta = aliased(Cuenta), aliased(Cuenta)
+        existe = db.scalar(
+            select(Transaccion.transaccion_id)
+            .outerjoin(OrigenCuenta, Transaccion.cuenta_origen_id == OrigenCuenta.cuenta_id)
+            .outerjoin(DestinoCuenta, Transaccion.cuenta_destino_id == DestinoCuenta.cuenta_id)
+            .where(
+                Transaccion.transaccion_id == datos.transaccion_id,
+                (OrigenCuenta.cliente_id == cliente_id) | (DestinoCuenta.cliente_id == cliente_id),
+            )
+        )
+        if existe is None:
+            raise RecursoNoEncontrado()
+
+
 def crear(db: Session, cliente_id: int, datos: QuejaIn) -> Queja:
     """RF-09: registro siempre; clasificacion GenAI best-effort en un commit aparte (V4/R8) —
     un fallo del LLM nunca impide ni revierte el registro de la queja."""
     if _quejas_creadas_hoy(db, cliente_id) >= settings.quejas_cuota_diaria:
         raise CuotaExcedida()
+    _validar_referencia_propia(db, cliente_id, datos)
 
-    queja = Queja(cliente_id=cliente_id, texto=datos.texto)
+    queja = Queja(
+        cliente_id=cliente_id, texto=datos.texto, tipo_legal=datos.tipo_legal,
+        pedido_consumidor=datos.pedido_consumidor, monto_reclamado=datos.monto_reclamado,
+        fecha_incidente=datos.fecha_incidente, cuenta_id=datos.cuenta_id, tarjeta_id=datos.tarjeta_id,
+        prestamo_id=datos.prestamo_id, transaccion_id=datos.transaccion_id,
+    )
     db.add(queja)
     db.commit()
     db.refresh(queja)
@@ -51,6 +95,25 @@ def crear(db: Session, cliente_id: int, datos: QuejaIn) -> Queja:
     clasificador.clasificar(db, queja)
     db.refresh(queja)
     return queja
+
+
+def _resolver_referencia(db: Session, queja: Queja) -> str | None:
+    """Texto legible de la referencia de la queja (si tiene), para que el frontend no tenga que
+    resolver el FK. Nunca expone mas que lo que ya es visible en otra parte del sistema
+    (ultimos_4 de la tarjeta, numero de cuenta, montos)."""
+    if queja.tarjeta_id is not None:
+        t = db.get(Tarjeta, queja.tarjeta_id)
+        return f"Tarjeta •••{t.ultimos_4}" if t else None
+    if queja.cuenta_id is not None:
+        c = db.get(Cuenta, queja.cuenta_id)
+        return f"Cuenta N.° {c.numero_cuenta}" if c else None
+    if queja.prestamo_id is not None:
+        p = db.get(Prestamo, queja.prestamo_id)
+        return f"Préstamo #{p.prestamo_id} — S/ {p.monto_original:,.2f}" if p else None
+    if queja.transaccion_id is not None:
+        tr = db.get(Transaccion, queja.transaccion_id)
+        return f"{tr.tipo.capitalize()} #{tr.transaccion_id} — S/ {tr.monto:,.2f}" if tr else None
+    return None
 
 
 def listar(db: Session, cliente_id: int) -> list[Queja]:
@@ -119,6 +182,9 @@ def listar_cola(db: Session, estado: str = "pendiente", categoria: str | None = 
             prioridad=queja.prioridad, estado_revision=queja.estado_revision, revisado_por_email=revisor_email,
             creado_en=queja.creado_en, revisado_en=queja.revisado_en, modelo_ia=ia["modelo_ia"],
             senal_vulnerabilidad=ia["senal_vulnerabilidad"], senal_amenaza_escalamiento=ia["senal_amenaza_escalamiento"],
+            tipo_legal=queja.tipo_legal, pedido_consumidor=queja.pedido_consumidor,
+            monto_reclamado=queja.monto_reclamado, fecha_incidente=queja.fecha_incidente,
+            referencia=_resolver_referencia(db, queja),
         ))
     return filas
 

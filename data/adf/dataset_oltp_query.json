@@ -1,0 +1,8 @@
+{
+  "type": "AzureSqlTable",
+  "linkedServiceName": {
+    "referenceName": "ls_oltp_sql",
+    "type": "LinkedServiceReference"
+  },
+  "typeProperties": {}
+}
