@@ -5,6 +5,15 @@
 
 <section class="bc-shell bc-reveal">
   <form [formGroup]="form" (ngSubmit)="enviar()" novalidate class="bc-core queja__form">
+    <label class="campo">
+      <span class="campo__label">Tipo</span>
+      <select formControlName="tipoLegal">
+        <option value="reclamo">Reclamo — tu producto o servicio no funcionó como debía</option>
+        <option value="queja">Queja — no estás conforme con la atención o el trato recibido</option>
+      </select>
+      <span class="campo__hint">Es la distinción legal del Libro de Reclamaciones (D.S. N° 011-2011-PCM).</span>
+    </label>
+
     <label class="campo" [class.campo--error]="invalido('texto')">
       <span class="campo__label">Cuéntanos qué pasó</span>
       <textarea formControlName="texto" rows="5" placeholder="Describe tu queja con el mayor detalle posible…"></textarea>
@@ -12,6 +21,84 @@
         <span class="campo__hint campo__hint--error">Escribe al menos 10 caracteres.</span>
       }
     </label>
+
+    <label class="campo">
+      <span class="campo__label">¿Qué solución pides? (opcional)</span>
+      <textarea formControlName="pedidoConsumidor" rows="2" maxlength="500"
+                placeholder="Ej. la devolución del cobro, la corrección de mi saldo…"></textarea>
+    </label>
+
+    <div class="queja__dupla">
+      <label class="campo" [class.campo--error]="invalido('montoReclamado')">
+        <span class="campo__label">Monto reclamado (opcional)</span>
+        <input formControlName="montoReclamado" type="text" inputmode="decimal" placeholder="0.00" />
+        @if (invalido('montoReclamado')) {
+          <span class="campo__hint campo__hint--error">Monto inválido, máximo 2 decimales.</span>
+        }
+      </label>
+
+      <label class="campo">
+        <span class="campo__label">Fecha del incidente (opcional)</span>
+        <input formControlName="fechaIncidente" type="date" [max]="hoy" />
+      </label>
+    </div>
+
+    <label class="campo">
+      <span class="campo__label">¿Sobre qué producto u operación? (opcional)</span>
+      <select formControlName="tipoReferencia">
+        <option value="ninguna">No referenciar nada en particular</option>
+        <option value="cuenta">Una cuenta</option>
+        <option value="tarjeta">Una tarjeta</option>
+        <option value="prestamo">Un préstamo</option>
+        <option value="transaccion">Una transacción</option>
+      </select>
+    </label>
+
+    @if (form.value.tipoReferencia === 'cuenta') {
+      <label class="campo">
+        <span class="campo__label">Cuenta</span>
+        <select formControlName="referenciaId">
+          <option [ngValue]="null" disabled>Selecciona una cuenta</option>
+          @for (c of cuentas(); track c.cuenta_id) {
+            <option [ngValue]="c.cuenta_id">N.° {{ c.numero_cuenta }} · {{ c.moneda }}</option>
+          }
+        </select>
+      </label>
+    } @else if (form.value.tipoReferencia === 'tarjeta') {
+      <label class="campo">
+        <span class="campo__label">Tarjeta</span>
+        <select formControlName="referenciaId">
+          <option [ngValue]="null" disabled>Selecciona una tarjeta</option>
+          @for (t of tarjetas(); track t.tarjeta_id) {
+            <option [ngValue]="t.tarjeta_id">•••• {{ t.ultimos_4 }} · {{ t.tipo_tarjeta }}</option>
+          }
+        </select>
+      </label>
+    } @else if (form.value.tipoReferencia === 'prestamo') {
+      <label class="campo">
+        <span class="campo__label">Préstamo</span>
+        <select formControlName="referenciaId">
+          <option [ngValue]="null" disabled>Selecciona un préstamo</option>
+          @for (p of prestamos(); track p.prestamo_id) {
+            <option [ngValue]="p.prestamo_id">#{{ p.prestamo_id }} · S/ {{ p.monto_original }}</option>
+          }
+        </select>
+      </label>
+    } @else if (form.value.tipoReferencia === 'transaccion') {
+      <label class="campo">
+        <span class="campo__label">Transacción</span>
+        @if (cargandoTransacciones()) {
+          <p class="campo__hint">Cargando tus transacciones…</p>
+        } @else {
+          <select formControlName="referenciaId">
+            <option [ngValue]="null" disabled>Selecciona una transacción</option>
+            @for (t of transacciones(); track t.transaccion_id) {
+              <option [ngValue]="t.transaccion_id">{{ etiquetaTransaccion(t) }}</option>
+            }
+          </select>
+        }
+      </label>
+    }
 
     @if (errorServidor()) {
       <p class="queja__error" role="alert">{{ errorServidor() }}</p>

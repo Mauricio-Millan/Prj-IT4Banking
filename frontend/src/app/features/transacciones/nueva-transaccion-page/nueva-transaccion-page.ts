@@ -71,14 +71,18 @@ export class NuevaTransaccionPage implements OnInit {
   protected enviar() {
     const datos = this.form.getRawValue();
     const esDeposito = datos.tipo === 'deposito';
+    const esRetiro = datos.tipo === 'retiro';
     const esTransferencia = datos.tipo === 'transferencia';
-    const cuentaDestino = esDeposito ? datos.cuenta_destino_deposito : datos.cuenta_destino_transferencia;
+    // Un retiro no tiene cuenta destino — solo depósito y transferencia la requieren.
+    const cuentaDestino = esDeposito ? datos.cuenta_destino_deposito
+      : esTransferencia ? datos.cuenta_destino_transferencia
+      : null;
     const faltaOrigen = !esDeposito && datos.cuenta_origen_id == null;
-    const faltaDestino = !cuentaDestino;
+    const faltaDestino = !esRetiro && !cuentaDestino;
     const faltaCanal = !esTransferencia && !datos.canal;
     const destinoControl = esDeposito ? 'cuenta_destino_deposito' : 'cuenta_destino_transferencia';
 
-    if (this.form.get('monto')!.invalid || this.form.get(destinoControl)!.invalid || faltaOrigen || faltaDestino || faltaCanal) {
+    if (this.form.get('monto')!.invalid || (!esRetiro && this.form.get(destinoControl)!.invalid) || faltaOrigen || faltaDestino || faltaCanal) {
       this.form.markAllAsTouched();
       if (faltaOrigen) this.form.get('cuenta_origen_id')!.setErrors({ required: true });
       if (faltaDestino) this.form.get(destinoControl)!.setErrors({ required: true });

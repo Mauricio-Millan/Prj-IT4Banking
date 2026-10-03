@@ -1,0 +1,9 @@
+{
+  "type": "AzureSqlDatabase",
+  "typeProperties": {
+    "connectionString": {
+      "type": "SecureString",
+      "value": "Server=tcp:sql-bancocloud-utp.database.windows.net,1433;Initial Catalog=bancocloud-dw-dev;Persist Security Info=False;User ID=<SQL_USER>;Password=<SQL_PASSWORD>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+    }
+  }
+}

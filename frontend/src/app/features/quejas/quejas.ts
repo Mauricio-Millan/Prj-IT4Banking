@@ -2,8 +2,19 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
+export type TipoLegalQueja = 'reclamo' | 'queja';
+
 export interface QuejaIn {
   texto: string;
+  tipo_legal?: TipoLegalQueja;
+  pedido_consumidor?: string | null;
+  // string, nunca number — mismo criterio que TransaccionIn.monto (Pydantic parsea el texto exacto)
+  monto_reclamado?: string | null;
+  fecha_incidente?: string | null;
+  cuenta_id?: number | null;
+  tarjeta_id?: number | null;
+  prestamo_id?: number | null;
+  transaccion_id?: number | null;
 }
 
 export interface QuejaOut {

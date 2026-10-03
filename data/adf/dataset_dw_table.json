@@ -1,0 +1,25 @@
+{
+  "type": "AzureSqlTable",
+  "linkedServiceName": {
+    "referenceName": "ls_dw_sql",
+    "type": "LinkedServiceReference"
+  },
+  "parameters": {
+    "esquema": {
+      "type": "string"
+    },
+    "tabla": {
+      "type": "string"
+    }
+  },
+  "typeProperties": {
+    "schema": {
+      "value": "@dataset().esquema",
+      "type": "Expression"
+    },
+    "table": {
+      "value": "@dataset().tabla",
+      "type": "Expression"
+    }
+  }
+}

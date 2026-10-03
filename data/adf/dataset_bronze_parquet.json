@@ -1,0 +1,27 @@
+{
+  "type": "Parquet",
+  "linkedServiceName": {
+    "referenceName": "ls_adls_bronze",
+    "type": "LinkedServiceReference"
+  },
+  "parameters": {
+    "tabla": {
+      "type": "string"
+    },
+    "fecha": {
+      "type": "string"
+    }
+  },
+  "typeProperties": {
+    "location": {
+      "type": "AzureBlobFSLocation",
+      "fileSystem": "bronze-dev",
+      "folderPath": {
+        "value": "@concat(dataset().tabla, '/fecha=', dataset().fecha)",
+        "type": "Expression"
+      },
+      "fileName": "part-0.parquet"
+    },
+    "compressionCodec": "snappy"
+  }
+}

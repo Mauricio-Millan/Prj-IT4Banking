@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +10,11 @@ import {
   QuejasRevision,
 } from '../quejas-revision';
 
-const ETIQUETA_CATEGORIA: Record<CategoriaQueja, string> = {
+// Record<string, string> (no Record<CategoriaQueja, string>): las tarjetas se renderizan vía
+// ng-template + ngTemplateOutlet (reuso entre tablero por estado y por categoria), cuyo contexto
+// Angular tipa como `any` -- indexar con una clave `any` un Record de union estricta es un error
+// de TS (ts7053) aunque el valor en runtime siempre sea una CategoriaQueja valida.
+const ETIQUETA_CATEGORIA: Record<string, string> = {
   producto: 'Producto', servicio: 'Servicio', fraude: 'Fraude', otro: 'Otro',
 };
 
@@ -22,7 +26,7 @@ const ETIQUETA_CATEGORIA: Record<CategoriaQueja, string> = {
  */
 @Component({
   selector: 'bc-quejas-revision-page',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, NgTemplateOutlet],
   templateUrl: './quejas-revision-page.html',
   styleUrl: './quejas-revision-page.scss',
 })
@@ -41,6 +45,18 @@ export class QuejasRevisionPage implements OnInit {
   protected readonly pendientes = computed(() => this.cola().filter(q => q.estado_revision === 'pendiente'));
   protected readonly confirmadas = computed(() => this.cola().filter(q => q.estado_revision === 'confirmada'));
   protected readonly corregidas = computed(() => this.cola().filter(q => q.estado_revision === 'corregida'));
+
+  // Extension 2026-10-02: tablero Kanban adicional, agrupado por categoria_sugerida. Puramente
+  // client-side sobre la misma cola() ya cargada con estado=todos -- sin llamadas de red nuevas.
+  protected readonly agrupacion = signal<'estado' | 'categoria'>('estado');
+  protected readonly porCategoria = computed(() => {
+    const grupos: Record<CategoriaQueja | 'sin_clasificar', QuejaRevisionOut[]> =
+      { producto: [], servicio: [], fraude: [], otro: [], sin_clasificar: [] };
+    for (const q of this.cola()) {
+      grupos[q.categoria_sugerida ?? 'sin_clasificar'].push(q);
+    }
+    return grupos;
+  });
 
   protected readonly seleccion = signal<Record<number, CategoriaQueja>>({});
   protected readonly resolviendo = signal<number | null>(null);

@@ -26,6 +26,11 @@ export interface QuejaRevisionOut {
   modelo_ia: string | null;
   senal_vulnerabilidad: boolean | null;
   senal_amenaza_escalamiento: boolean | null;
+  tipo_legal: 'reclamo' | 'queja';
+  pedido_consumidor: string | null;
+  monto_reclamado: string | null;
+  fecha_incidente: string | null;
+  referencia: string | null;
 }
 
 export interface MetricasQuejasOut {
